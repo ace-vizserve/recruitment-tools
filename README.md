@@ -1,36 +1,123 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MRF Link Generator
+
+An internal web tool for HFSE that generates platform-specific job application
+URLs for the company website (GEG), Indeed, and MyCareersFuture Singapore.
+
+Previously, the recruiter had to contact the developer every time a job link
+was needed. This tool eliminates that dependency entirely.
+
+---
+
+## Features
+
+- 🔐 Password-protected login (HTTP-only cookie via Next.js API route)
+- 🔗 Generates three job application URLs from a single form submission
+- 📋 One-click copy per platform link
+- 🕓 Local history of previously generated links (stored in `localStorage`)
+- 🗑️ Delete individual history entries or clear all at once
+- 🚀 Fully static-friendly — no database required
+
+---
+
+## Platforms Supported
+
+| Platform           | `job-portal` Value |
+| ------------------ | ------------------ |
+| GEG (company site) | _(omitted)_        |
+| Indeed             | `1`                |
+| MyCareersFuture    | `2481`             |
+
+---
+
+## Tech Stack
+
+- **Framework** — Next.js (App Router)
+- **Auth** — HTTP-only cookie + `/api/login` route
+- **Storage** — `localStorage` for link history
+- **Hosting** — Vercel (free tier)
+
+---
 
 ## Getting Started
 
-First, run the development server:
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Set up environment variables
+
+Create a `.env.local` file in the root:
+
+```env
+APP_PASSWORD=your_secure_password_here
+```
+
+> This is server-side only and never exposed to the client.
+
+### 3. Run the development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## URL Structure
 
-## Learn More
+**Base URL:** `https://hfse.edu.sg/submit-application/`
 
-To learn more about Next.js, take a look at the following resources:
+```
+# GEG
+?job-id={job_id}&org-name={org_name}&job-title={encoded_title}
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Indeed
+?job-portal=1&job-id={job_id}&org-name={org_name}&job-title={encoded_title}
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# MyCareersFuture
+?job-portal=2481&job-id={job_id}&org-name={org_name}&job-title={encoded_title}
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+/app
+  /login        → Login page
+  /api/login    → POST: validate password, set cookie
+  /api/logout   → POST: clear cookie
+  page.tsx      → Generator + history (protected)
+/middleware.ts  → Protects all routes except /login
+/lib
+  urlEncoder.ts → URL encoding logic
+  history.ts    → localStorage helpers
+/public
+  /logos        → Platform logo assets (geg.png, etc.)
+```
+
+---
+
+## Deployment
+
+```bash
+# Build
+npm run build
+
+# Deploy to Vercel
+vercel deploy
+```
+
+> Set `APP_PASSWORD` in your Vercel project environment variables.
+> Add logo domains to `next.config.js` under `images.domains`.
+
+---
+
+## Notes
+
+- Job titles are URL-encoded to handle spaces, special characters, and em-dashes
+- History is stored client-side in `localStorage` — clearing browser data will reset it
+- This tool is intended for internal use only
