@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Copy, History, Link2, Loader2, LogOut, Sparkles, Trash2, Zap } from "lucide-react";
+import { Briefcase, Check, Copy, History, Link2, Loader2, LogOut, Sparkles, Trash2, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useForm } from "react-hook-form";
@@ -14,15 +14,32 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { entity_list } from "@/lib/constants";
 import { clearHistory, deleteHistoryEntry, getHistory, saveHistoryEntry, type HistoryEntry } from "@/lib/history";
 import { encodeJobTitle } from "@/lib/urlEncoder";
 import Image from "next/image";
 
+const ENTITY_SLUGS: Record<number, string> = {
+  3779178: "hapi-haus",
+  3779180: "hapi-space",
+  3779176: "hfse-ga",
+  3779172: "hfse",
+  3779173: "hfse-ys",
+  3779179: "our-hapi-co",
+  3779177: "vizschool",
+};
+
 const formSchema = z.object({
+  entityId: z.string().min(1, "Required"),
   orgName: z.string().min(1, "Required"),
   jobId: z.string().min(1, "Required"),
   jobTitle: z.string().min(1, "Required"),
 });
+
+interface Job {
+  id: number;
+  position_name: string;
+}
 
 const PLATFORMS = [
   { key: "geg", label: "GEG", color: "bg-blue-50 text-blue-600 border-blue-100" },
@@ -37,10 +54,15 @@ export default function Home() {
   const [isHistoryLoading, setIsHistoryLoading] = React.useState(true);
   const [isCopied, setIsCopied] = React.useState<string | null>(null);
 
+  const [jobs, setJobs] = React.useState<Job[]>([]);
+  const [isLoadingJobs, setIsLoadingJobs] = React.useState(false);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { orgName: "", jobId: "", jobTitle: "" },
+    defaultValues: { entityId: "", orgName: "", jobId: "", jobTitle: "" },
   });
+
+  const selectedEntityId = form.watch("entityId");
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -49,6 +71,35 @@ export default function Home() {
     }, 400);
     return () => clearTimeout(timer);
   }, []);
+
+  // Fetch jobs when entity changes
+  React.useEffect(() => {
+    if (!selectedEntityId) {
+      setJobs([]);
+      return;
+    }
+
+    const fetchJobs = async () => {
+      setIsLoadingJobs(true);
+      try {
+        const response = await fetch(`/api/jobs?entity-id=${selectedEntityId}`);
+        if (response.ok) {
+          const data = await response.json();
+          // Manatal API returns jobs in the 'results' array
+          setJobs(data.results || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch jobs:", error);
+      } finally {
+        setIsLoadingJobs(false);
+      }
+    };
+
+    fetchJobs();
+    // Reset job selection when entity changes
+    form.setValue("jobId", "");
+    form.setValue("jobTitle", "");
+  }, [selectedEntityId, form]);
 
   const handleLogout = async () => {
     await fetch("/api/logout", { method: "POST" });
@@ -68,7 +119,8 @@ export default function Home() {
 
     setGeneratedUrls(urls);
     setHistory(saveHistoryEntry({ orgName, jobId, jobTitle, encodedTitle, urls }));
-    form.reset();
+    form.reset({ entityId: "", orgName: "", jobId: "", jobTitle: "" });
+    setJobs([]);
   }
 
   const copyToClipboard = (text: string, key: string) => {
@@ -82,10 +134,7 @@ export default function Home() {
     return (
       <div className="pill-root flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-4">
-          {/* Simple Blue Spinner */}
           <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
-
-          {/* Clean Poppins Text */}
           <p className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Loading</p>
         </div>
       </div>
@@ -120,8 +169,8 @@ export default function Home() {
           border: 1.5px solid #e2e8f0 !important;
           background: #fcfdfe !important;
           padding-left: 1.5rem !important;
-          font-size: 1rem !important; /* Larger text */
-          height: 3.5rem !important; /* Taller input */
+          font-size: 1rem !important;
+          height: 3.5rem !important;
           transition: all 0.2s ease;
         }
 
@@ -141,10 +190,16 @@ export default function Home() {
           transition: all 0.2s ease !important;
         }
 
-        .pill-btn-primary:hover {
+        .pill-btn-primary:hover:not(:disabled) {
           background: #2563eb !important;
           transform: translateY(-2px);
           box-shadow: 0 12px 20px -5px rgba(59, 130, 246, 0.3);
+        }
+
+        .pill-btn-primary:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          background: #94a3b8 !important;
         }
 
         .pill-badge {
@@ -156,10 +211,9 @@ export default function Home() {
 
         .mono-text {
           font-family: "JetBrains Mono", monospace;
-          font-size: 0.85rem; /* Larger mono text */
+          font-size: 0.85rem;
         }
 
-        /* Update these in your existing global style block */
         .pill-select-trigger {
           border-radius: calc(0.25rem /* 4px */ + 4px);
           border: 1.5px solid #e2e8f0 !important;
@@ -176,9 +230,8 @@ export default function Home() {
           box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12) !important;
         }
 
-        /* Update your global styles to accommodate the larger row height */
         .pill-select-item {
-          height: 3.5rem !important; /* Increased from 3rem to fit h-12 images */
+          height: 3.5rem !important;
           border-radius: calc(0.25rem /* 4px */ + 4px);
           margin: 6px 10px !important;
           padding-left: 1rem !important;
@@ -188,7 +241,7 @@ export default function Home() {
 
         .pill-select-item:focus {
           background-color: #f0f7ff !important;
-          transform: translateX(4px); /* Subtle slide effect on hover/focus */
+          transform: translateX(4px);
         }
 
         .pill-select-content {
@@ -222,7 +275,6 @@ export default function Home() {
           </header>
 
           <div className="space-y-8">
-            {/* Generator Card */}
             <div className="pill-card p-10">
               <div className="mb-8 flex items-center gap-3">
                 <div className="p-2 bg-blue-50 rounded-lg">
@@ -234,15 +286,21 @@ export default function Home() {
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                   <div className="grid gap-6 sm:grid-cols-2">
+                    {/* Organization Selection */}
                     <FormField
                       control={form.control}
-                      name="orgName"
+                      name="entityId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs font-black uppercase tracking-widest text-slate-400 ml-4 mb-2 block">
                             Organization
                           </FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select
+                            onValueChange={(val) => {
+                              field.onChange(val);
+                              form.setValue("orgName", ENTITY_SLUGS[Number(val)] || "");
+                            }}
+                            defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger className="w-full pill-select-trigger">
                                 <SelectValue placeholder="Select an organization" />
@@ -250,25 +308,12 @@ export default function Home() {
                             </FormControl>
 
                             <SelectContent className="pill-select-content">
-                              {[
-                                { name: "HAPI HAUS", value: "hapi-haus", img: "/logos/hapi-haus-logo.png" },
-                                { name: "HAPI SPACE", value: "hapi-space", img: "/logos/hapi-space-logo.png" },
-                                {
-                                  name: "HFSE Global Academy",
-                                  value: "hfse-ga",
-                                  img: "/logos/hfse-global-academy-logo.png",
-                                },
-                                { name: "HFSE International School", value: "hfse", img: "/logos/hfse-logo.png" },
-                                { name: "HFSE YoungStarters", value: "hfse-ys", img: "/logos/ys-logo.png" },
-                                { name: "Our HAPI Co.", value: "our-hapi-co", img: "/logos/hapi-co-logo.png" },
-                                { name: "VizSchool", value: "vizschool", img: "/logos/vizschool-logo.png" },
-                              ].map((org) => (
-                                <SelectItem key={org.name} value={org.value} className="pill-select-item">
+                              {entity_list.map((org) => (
+                                <SelectItem key={org.id} value={org.id.toString()} className="pill-select-item">
                                   <div className="flex items-center gap-4">
-                                    {/* Larger Image Container */}
                                     <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
                                       <Image
-                                        src={org.img}
+                                        src={org.logo}
                                         alt={org.name}
                                         fill
                                         sizes="48px"
@@ -285,6 +330,62 @@ export default function Home() {
                         </FormItem>
                       )}
                     />
+
+                    {/* Job Selection */}
+                    <FormItem>
+                      <FormLabel className="text-xs font-black uppercase tracking-widest text-slate-400 ml-4 mb-2 block">
+                        Select Active Job
+                      </FormLabel>
+                      <Select
+                        disabled={!selectedEntityId || isLoadingJobs}
+                        onValueChange={(val) => {
+                          const job = jobs.find((j) => j.id.toString() === val);
+                          if (job) {
+                            form.setValue("jobId", job.id.toString());
+                            form.setValue("jobTitle", job.position_name);
+                          }
+                        }}
+                        value={form.watch("jobId")}>
+                        <FormControl>
+                          <SelectTrigger className="w-full pill-select-trigger">
+                            {isLoadingJobs ? (
+                              <div className="flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                                <span>Loading jobs...</span>
+                              </div>
+                            ) : (
+                              <SelectValue
+                                placeholder={selectedEntityId ? "Select a job" : "Select organization first"}
+                              />
+                            )}
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="pill-select-content">
+                          {jobs.length > 0 ? (
+                            jobs.map((job) => (
+                              <SelectItem key={job.id} value={job.id.toString()} className="pill-select-item">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2 bg-slate-50 rounded-lg">
+                                    <Briefcase className="h-4 w-4 text-slate-400" />
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-bold text-slate-700">{job.position_name}</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                                      ID: {job.id}
+                                    </span>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="p-4 text-center text-sm text-slate-400 font-semibold">
+                              {selectedEntityId ? "No active jobs found" : "Waiting for organization..."}
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+
                     <FormField
                       control={form.control}
                       name="jobId"
@@ -294,7 +395,7 @@ export default function Home() {
                             Job ID
                           </FormLabel>
                           <FormControl>
-                            <Input className="pill-input" placeholder="e.g. 10234" {...field} />
+                            <Input className="pill-input" placeholder="Auto-filled" {...field} readOnly />
                           </FormControl>
                         </FormItem>
                       )}
@@ -303,18 +404,21 @@ export default function Home() {
                       control={form.control}
                       name="jobTitle"
                       render={({ field }) => (
-                        <FormItem className="sm:col-span-2">
+                        <FormItem>
                           <FormLabel className="text-xs font-black uppercase tracking-widest text-slate-400 ml-4 mb-2 block">
                             Job Title
                           </FormLabel>
                           <FormControl>
-                            <Input className="pill-input" placeholder="e.g. Senior Software Engineer" {...field} />
+                            <Input className="pill-input" placeholder="Auto-filled" {...field} readOnly />
                           </FormControl>
                         </FormItem>
                       )}
                     />
                   </div>
-                  <Button type="submit" className="pill-btn-primary w-full">
+                  <Button
+                    type="submit"
+                    className="pill-btn-primary w-full"
+                    disabled={!form.watch("orgName") || !form.watch("jobTitle")}>
                     Create Application Links
                   </Button>
                 </form>
