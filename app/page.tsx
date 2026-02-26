@@ -106,7 +106,7 @@ export default function Home() {
     router.push("/login");
   };
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     const { orgName, jobId, jobTitle } = values;
     const encodedTitle = encodeJobTitle(jobTitle);
     const baseUrl = "https://hfse.edu.sg/submit-application/";
@@ -119,6 +119,24 @@ export default function Home() {
 
     setGeneratedUrls(urls);
     setHistory(saveHistoryEntry({ orgName, jobId, jobTitle, encodedTitle, urls }));
+
+    try {
+      await fetch("/api/send-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobTitle,
+          orgName,
+          jobId,
+          gegUrl: urls.geg,
+          indeedUrl: urls.indeed,
+          myCareersUrl: urls.myCareers,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to send Teams notification:", error);
+    }
+
     form.reset({ entityId: "", orgName: "", jobId: "", jobTitle: "" });
     setJobs([]);
   }
@@ -284,7 +302,7 @@ export default function Home() {
               </div>
 
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <form onSubmit={form.handleSubmit(async (values) => await onSubmit(values))} className="space-y-8">
                   <div className="grid gap-6 sm:grid-cols-2">
                     {/* Organization Selection */}
                     <FormField
