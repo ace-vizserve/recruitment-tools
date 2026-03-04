@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "../components/ui/sonner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,39 +13,41 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const APP_NAME = "HFSE Internal Tools";
+const APP_DESCRIPTION =
+  "A centralized suite of internal tools for HFSE recruiters and staff, including link generators, workflow utilities, and productivity features.";
+
 export const metadata: Metadata = {
   title: {
-    default: "MRF Links Generator - HFSE",
-    template: "%s | MRF Links Generator - HFSE",
+    default: APP_NAME,
+    template: `%s | ${APP_NAME}`,
   },
-  description: "A minimal web app for HFSE recruiters to instantly generate and manage GEG, Indeed, and MyCareers job application links, replicating the functionality of the generate_mrf_links.sh script with a browser-based form and local history.",
+  description: APP_DESCRIPTION,
   keywords: [
     "HFSE",
-    "MRF Links",
-    "Job Application Links",
-    "URL Generator",
+    "Internal Tools",
     "Recruiter Tools",
+    "Workflow Automation",
+    "URL Generator",
+    "Productivity",
     "Next.js",
     "Web App",
-    "GEG",
-    "Indeed",
-    "MyCareers",
   ],
-  authors: [{ name: "HFSE Internal", url: "https://hfse.edu.sg" }],
+  authors: [{ name: "HFSE Development Team", url: "https://hfse.edu.sg" }],
   creator: "HFSE Development Team",
   publisher: "HFSE International School",
-  metadataBase: new URL("https://hfse.edu.sg"), // Replace with actual deployment URL
+  metadataBase: new URL("https://hfse.edu.sg"), // Replace with production URL if different
   openGraph: {
-    title: "MRF Links Generator - HFSE",
-    description: "Instantly generate and manage job application links for HFSE GEG, Indeed, and MyCareers.",
-    url: "https://hfse.edu.sg", // Replace with actual deployment URL
-    siteName: "MRF Links Generator",
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
+    url: "https://hfse.edu.sg",
+    siteName: APP_NAME,
     images: [
       {
-        url: "/opengraph-image.jpg", // Relative to metadataBase
+        url: "/opengraph-image.jpg",
         width: 1200,
         height: 630,
-        alt: "MRF Links Generator for HFSE",
+        alt: "HFSE Internal Tools Platform",
       },
     ],
     locale: "en_US",
@@ -52,14 +55,12 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "MRF Links Generator - HFSE",
-    description: "Instantly generate and manage job application links for HFSE GEG, Indeed, and MyCareers.",
-    images: ["/twitter-image.jpg"], // Relative to metadataBase
-    creator: "@HFSEOfficial", // Replace with actual Twitter handle if exists
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
+    images: ["/twitter-image.jpg"],
   },
-  // Optional: Favicons and other icons
   icons: {
-    icon: "/geg logo.png",
+    icon: "/favicon.png",
   },
   manifest: "/site.webmanifest",
 };
@@ -71,10 +72,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   );
