@@ -445,6 +445,14 @@ export default function ExcelToJson() {
           padding-left: 1.25rem;
         }
 
+        .tiptap-editor ul {
+          list-style-type: disc !important;
+        }
+
+        .tiptap-editor ol {
+          list-style-type: decimal !important;
+        }
+
         .field-error {
           display: flex;
           align-items: center;
