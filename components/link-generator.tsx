@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { entity_list } from "@/lib/constants";
 import { type HistoryEntry } from "@/lib/history";
-import { encodeJobTitle } from "@/lib/urlEncoder";
 import Image from "next/image";
 
 const ENTITY_SLUGS: Record<number, string> = {
@@ -54,7 +53,6 @@ function LinkGenerator() {
   const [isSending, setIsSending] = React.useState(false);
   const [isSent, setIsSent] = React.useState(false);
 
-  // Snapshot of form values at generation time — used for sending
   const [pendingSendPayload, setPendingSendPayload] = React.useState<{
     jobTitle: string;
     orgName: string;
@@ -99,24 +97,22 @@ function LinkGenerator() {
     form.setValue("jobTitle", "");
   }, [selectedEntityId, form]);
 
-  // Step 1: Generate URLs only — does NOT send
   function onGenerate(values: z.infer<typeof formSchema>) {
     const { orgName, jobId, jobTitle } = values;
-    const encodedTitle = encodeJobTitle(jobTitle);
-    const baseUrl = "https://hfse.edu.sg/submit-application/";
+
+    const baseUrl = "https://careers.hfse.edu.sg/jobs";
 
     const urls = {
-      geg: `${baseUrl}?job-id=${jobId}&org-name=${orgName}&job-title=${encodedTitle}`,
-      indeed: `${baseUrl}?job-portal=1&job-id=${jobId}&org-name=${orgName}&job-title=${encodedTitle}`,
-      myCareers: `${baseUrl}?job-portal=2481&job-id=${jobId}&org-name=${orgName}&job-title=${encodedTitle}`,
+      geg: `${baseUrl}/${jobId}/apply`,
+      indeed: `${baseUrl}/${jobId}/apply?job-portal=1`,
+      myCareers: `${baseUrl}/${jobId}/apply?job-portal=2481`,
     };
 
     setGeneratedUrls(urls);
-    setIsSent(false); // reset sent state if re-generating
+    setIsSent(false);
     setPendingSendPayload({ jobTitle, orgName, jobId });
   }
 
-  // Step 2: Send links — only triggered manually
   async function onSendLinks() {
     if (!generatedUrls || !pendingSendPayload) return;
 
@@ -137,7 +133,6 @@ function LinkGenerator() {
 
       setIsSent(true);
 
-      // Reset form after sending
       form.reset({ entityId: "", orgName: "", jobId: "", jobTitle: "" });
       setJobs([]);
       setPendingSendPayload(null);
