@@ -5,11 +5,14 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const entityId = searchParams.get("entity-id");
 
-    const response = await fetch(`https://api.manatal.com/open/v3/jobs/?organization_id=${entityId}&status=active`, {
-      headers: {
-        Authorization: `Token ${MANATAL_OPEN_API_KEY}`,
+    const response = await fetch(
+      `https://api.manatal.com/open/v3/jobs/?organization_id=${entityId}&status=active&is_published=true`,
+      {
+        headers: {
+          Authorization: `Token ${MANATAL_OPEN_API_KEY}`,
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       const errorBody = await response.text();
