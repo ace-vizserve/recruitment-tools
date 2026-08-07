@@ -305,34 +305,12 @@ export default function ExcelToJson() {
 
   return (
     <>
+      {/* Component-private styles only. The shared .pill-* rules (.pill-input,
+          .pill-panel, .pill-action-btn, .field-error) live in app/globals.css
+          so they survive the split into per-tool routes. */}
       <style jsx global>{`
-        @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap");
-
         .mailer-root {
-          font-family: "Poppins", sans-serif;
-        }
-
-        .pill-input {
-          border-radius: calc(0.25rem /* 4px */ + 4px);
-          border: 1.5px solid #e2e8f0 !important;
-          background: #fcfdfe !important;
-          padding-left: 1.5rem !important;
-          font-size: 1rem !important;
-          height: 3.5rem !important;
-          transition: all 0.2s ease;
-        }
-
-        .pill-input:focus {
-          border-color: #3b82f6 !important;
-          background: white !important;
-          box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12) !important;
-        }
-
-        .pill-panel {
-          background: white;
-          border: 1px solid #e2e8f0;
-          border-radius: calc(0.25rem + 4px);
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
+          font-family: var(--font-poppins), sans-serif;
         }
 
         .pill-file-label {
@@ -354,13 +332,6 @@ export default function ExcelToJson() {
           background: #f0f7ff;
           border-color: #3b82f6;
           color: #3b82f6;
-        }
-
-        .pill-action-btn {
-          height: 3.5rem;
-          border-radius: calc(0.25rem + 4px);
-          font-weight: 700 !important;
-          transition: all 0.2s ease !important;
         }
 
         .error-list {
@@ -451,16 +422,6 @@ export default function ExcelToJson() {
 
         .tiptap-editor ol {
           list-style-type: decimal !important;
-        }
-
-        .field-error {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          font-size: 0.75rem;
-          color: #ef4444;
-          font-weight: 600;
-          margin-top: 5px;
         }
       `}</style>
 

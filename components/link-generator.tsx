@@ -11,19 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { entity_list } from "@/lib/constants";
+import { ENTITY_SLUGS, entity_list } from "@/lib/constants";
 import { type HistoryEntry } from "@/lib/history";
 import Image from "next/image";
-
-const ENTITY_SLUGS: Record<number, string> = {
-  3779178: "hapi-haus",
-  3779180: "hapi-space",
-  3779176: "hfse-ga",
-  3779172: "hfse",
-  3779173: "hfse-ys",
-  3779179: "our-hapi-co",
-  3779177: "vizschool",
-};
 
 const formSchema = z.object({
   entityId: z.string().min(1, "Required"),
@@ -180,143 +170,6 @@ function LinkGenerator() {
 
   return (
     <>
-      <style jsx global>{`
-        .pill-card {
-          background: white;
-          border: 1px solid #e2e8f0;
-          border-radius: calc(0.25rem + 4px);
-          box-shadow:
-            0 10px 15px -3px rgba(0, 0, 0, 0.04),
-            0 4px 6px -2px rgba(0, 0, 0, 0.02);
-        }
-
-        .pill-input {
-          border-radius: calc(0.25rem + 4px);
-          border: 1.5px solid #e2e8f0 !important;
-          background: #fcfdfe !important;
-          padding-left: 1.5rem !important;
-          font-size: 1rem !important;
-          height: 3.5rem !important;
-          transition: all 0.2s ease;
-        }
-
-        .pill-input:focus {
-          border-color: #3b82f6 !important;
-          background: white !important;
-          box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12) !important;
-        }
-
-        .pill-btn-primary {
-          background: #3b82f6 !important;
-          color: white !important;
-          border-radius: calc(0.25rem + 4px);
-          font-weight: 700 !important;
-          font-size: 1rem !important;
-          height: 3.5rem !important;
-          transition: all 0.2s ease !important;
-        }
-
-        .pill-btn-primary:hover:not(:disabled) {
-          background: #2563eb !important;
-          transform: translateY(-2px);
-          box-shadow: 0 12px 20px -5px rgba(59, 130, 246, 0.3);
-        }
-
-        .pill-btn-primary:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-          background: #94a3b8 !important;
-        }
-
-        .pill-btn-success {
-          background: #16a34a !important;
-          color: white !important;
-          border-radius: calc(0.25rem + 4px);
-          font-weight: 700 !important;
-          font-size: 1rem !important;
-          height: 3.5rem !important;
-          transition: all 0.2s ease !important;
-        }
-
-        .pill-btn-success:hover:not(:disabled) {
-          background: #15803d !important;
-          transform: translateY(-2px);
-          box-shadow: 0 12px 20px -5px rgba(22, 163, 74, 0.3);
-        }
-
-        .pill-btn-success:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .pill-badge {
-          border-radius: calc(0.25rem + 4px);
-          font-size: 0.75rem !important;
-          padding: 4px 14px !important;
-          font-weight: 700 !important;
-        }
-
-        .mono-text {
-          font-family: "JetBrains Mono", monospace;
-          font-size: 0.85rem;
-        }
-
-        .pill-select-trigger {
-          border-radius: calc(0.25rem + 4px);
-          border: 1.5px solid #e2e8f0 !important;
-          background: #fcfdfe !important;
-          padding-left: 1.5rem !important;
-          font-size: 1rem !important;
-          height: 3.5rem !important;
-          font-family: "Poppins", sans-serif;
-          transition: all 0.2s ease;
-        }
-
-        .pill-select-trigger:focus {
-          border-color: #3b82f6 !important;
-          box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12) !important;
-        }
-
-        .pill-select-item {
-          height: 3.5rem !important;
-          border-radius: calc(0.25rem + 4px);
-          margin: 6px 10px !important;
-          padding-left: 1rem !important;
-          transition: all 0.2s ease;
-          font-family: "Poppins", sans-serif;
-        }
-
-        .pill-select-item:focus {
-          background-color: #f0f7ff !important;
-          transform: translateX(4px);
-        }
-
-        .pill-select-content {
-          border-radius: calc(0.25rem + 4px);
-          padding: 8px 0 !important;
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1) !important;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f1f5f9;
-          border-radius: 10px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #cbd5e1;
-          border-radius: 10px;
-          border: 2px solid #f1f5f9;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #94a3b8;
-        }
-      `}</style>
-
       <div className="pill-card p-10">
         <div className="mb-8 flex items-center gap-3">
           <div className="p-2 bg-blue-50 rounded-lg">

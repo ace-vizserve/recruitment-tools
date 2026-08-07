@@ -1,3 +1,14 @@
+/** Manatal organization id → the slug used in career-site URLs and filenames. */
+export const ENTITY_SLUGS: Record<number, string> = {
+  3779178: "hapi-haus",
+  3779180: "hapi-space",
+  3779176: "hfse-ga",
+  3779172: "hfse",
+  3779173: "hfse-ys",
+  3779179: "our-hapi-co",
+  3779177: "vizschool",
+};
+
 export const entity_list = [
   {
     id: 3779178,
