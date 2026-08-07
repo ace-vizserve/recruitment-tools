@@ -70,14 +70,21 @@ export interface ReportPeriod {
 }
 
 export interface ReportTotals {
-  /** Headline figure: one per application, so a re-applicant counts twice. */
+  /**
+   * Headline figure: candidates with any activity in the period — applied,
+   * interviewed, offered, hired or dropped. One per application, so a
+   * re-applicant counts twice.
+   */
   applications: number;
   uniqueCandidates: number;
+  /** Dropped *during* the period, not dropped-ever. */
   dropped: number;
   /** Reached the final stage in the pipeline. */
   completed: number;
-  /** Share of applications that got past the first stage. */
+  /** Share that got past the first stage. */
   passThroughPct: number | null;
+  /** Of the active candidates, how many first applied inside the period. */
+  appliedInPeriod: number | null;
 }
 
 export interface ReportMeta {
@@ -106,8 +113,6 @@ export interface ReportAggregate {
   dropReasonMentions: number;
   /** Null when no record carried a `source`. */
   sources: { name: string; count: number }[] | null;
-  /** Drops recorded in the window for candidates who applied outside it. */
-  outOfCohortDrops: number | null;
   /** True when REPORTS_USE_FIXTURE served this instead of the live webhook. */
   isSampleData?: boolean;
   meta: ReportMeta;

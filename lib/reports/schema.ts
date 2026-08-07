@@ -110,6 +110,10 @@ export const ManatalMatchSchema = z
     submitted_at: z.string().nullish(),
     created_at: z.string().nullish(),
     dropped_at: z.string().nullish(),
+    // Milestone timestamps. These are the only per-stage dates Manatal
+    // exposes, and they are what makes an activity-scoped period possible.
+    interview_at: z.string().nullish(),
+    offer_at: z.string().nullish(),
     hired_at: z.string().nullish(),
     is_active: z.boolean().nullish(),
     /** Not native to Manatal; present only if n8n enriches the record. */

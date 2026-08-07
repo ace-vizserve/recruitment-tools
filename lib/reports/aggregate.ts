@@ -128,13 +128,7 @@ export function aggregateReport(payload: ReportPayload, options: AggregateOption
   // comment, and among those the latest `created_at` wins (a candidate can be
   // pooled first and blacklisted later; the final reason is the real one).
   const dropEventByMatch = new Map<string, DropEvent>();
-  let outOfCohortDrops = 0;
   for (const event of payload.dropEvents ?? []) {
-    if (event.outOfCohort) {
-      outOfCohortDrops++;
-      continue;
-    }
-
     const existing = dropEventByMatch.get(event.match_pk);
     if (!existing) {
       dropEventByMatch.set(event.match_pk, event);
@@ -398,6 +392,8 @@ export function aggregateReport(payload: ReportPayload, options: AggregateOption
       dropped: droppedTotal,
       completed: lastStageIndex >= 0 ? resolved.filter((r) => r.furthest >= lastStageIndex).length : 0,
       passThroughPct: safePct(resolved.filter((r) => r.furthest > 0).length, resolved.length),
+      // Filled in by the caller, which knows the period window.
+      appliedInPeriod: null,
     },
     stageReports,
     overallDropReasons,
@@ -407,7 +403,6 @@ export function aggregateReport(payload: ReportPayload, options: AggregateOption
           .map(([name, count]) => ({ name, count }))
           .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
       : null,
-    outOfCohortDrops: (payload.dropEvents ?? []).length ? outOfCohortDrops : null,
     meta: {
       generatedAt: options.generatedAt,
       integrityOk,

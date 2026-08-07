@@ -72,8 +72,8 @@ export interface NormalizeOptions {
 
 export interface NormalizeResult {
   payload: ReportPayload;
-  /** Dropped inside the window but applied outside it — reported separately. */
-  outOfCohortDrops: number;
+  /** Candidates whose application arrived inside the window. */
+  appliedInPeriod: number;
   /** True when the stage order came from the matches, not the pipeline. */
   stagesDerived: boolean;
 }
@@ -118,20 +118,35 @@ export function normalizeManatalPayload(
     return !Number.isNaN(t) && t >= from && t <= to;
   };
 
-  let outOfCohortDrops = 0;
+  let appliedInPeriod = 0;
   const matches: ReportPayload["matches"] = [];
 
   for (const match of allMatches) {
     const appliedAt = match.submitted_at ?? match.created_at ?? null;
     const stageName = stageNameOf(match);
-    const isDropped = !!match.dropped_at;
 
-    if (!inWindow(appliedAt)) {
-      // Applied before the window. Still worth counting if the drop decision
-      // itself landed inside it, so the period's activity isn't invisible.
-      if (isDropped && inWindow(match.dropped_at)) outOfCohortDrops++;
-      continue;
-    }
+    // A report covers the work done in the period, not the intake of the
+    // period. So a candidate belongs to it if anything happened to them
+    // inside the window — they applied, were interviewed, got an offer, were
+    // hired, or were dropped. Anchoring on the application date instead made
+    // a month with little new intake look empty while hiding the decisions
+    // the team actually made that month.
+    const appliedNow = inWindow(appliedAt);
+    const droppedNow = inWindow(match.dropped_at);
+    const active =
+      appliedNow ||
+      droppedNow ||
+      inWindow(match.interview_at) ||
+      inWindow(match.offer_at) ||
+      inWindow(match.hired_at);
+
+    if (!active) continue;
+    if (appliedNow) appliedInPeriod++;
+
+    // Scoped to the window too: a candidate dropped in September must not
+    // count as a drop on August's report merely for being interviewed in
+    // August. Over an all-time window this is every drop, unchanged.
+    const isDropped = droppedNow;
 
     if (!stageName) continue;
 
@@ -155,7 +170,7 @@ export function normalizeManatalPayload(
   const job = input.job;
 
   return {
-    outOfCohortDrops,
+    appliedInPeriod,
     stagesDerived,
     payload: {
       job: {

@@ -117,7 +117,7 @@ export async function GET(request: Request) {
     // relayed by n8n (which we map and period-filter ourselves, since
     // /matches/ offers no date filtering).
     let reportPayload;
-    let manatalOutOfCohortDrops: number | null = null;
+    let appliedInPeriod: number | null = null;
     let stagesDerived = false;
 
     if (isManatalPayload(payload)) {
@@ -136,7 +136,7 @@ export async function GET(request: Request) {
         organizationId,
       });
       reportPayload = normalized.payload;
-      manatalOutOfCohortDrops = normalized.outOfCohortDrops;
+      appliedInPeriod = normalized.appliedInPeriod;
       stagesDerived = normalized.stagesDerived;
     } else {
       const parsed = ReportPayloadSchema.safeParse(payload);
@@ -183,9 +183,9 @@ export async function GET(request: Request) {
       });
     }
 
-    // The Manatal path sees the full match list, so it can count these exactly.
-    if (manatalOutOfCohortDrops !== null) {
-      aggregate.outOfCohortDrops = manatalOutOfCohortDrops;
+    // Only the Manatal path knows the period window, so it supplies this.
+    if (appliedInPeriod !== null) {
+      aggregate.totals.appliedInPeriod = appliedInPeriod;
     }
 
     if (!aggregate.meta.integrityOk) {

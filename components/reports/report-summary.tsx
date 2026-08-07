@@ -50,7 +50,7 @@ export default function ReportSummary({
       <div className="mt-8">
         <p className="text-5xl font-extrabold leading-none text-slate-900">{formatCount(totals.applications)}</p>
         <p className="mt-2 text-sm font-medium text-slate-500">
-          total {pluralize(totals.applications, "application")} in this period
+          {pluralize(totals.applications, "candidate")} worked on in this period
         </p>
       </div>
 
@@ -65,36 +65,34 @@ export default function ReportSummary({
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
-          label="Applications"
+          label="Candidates active"
           value={formatCount(totals.applications)}
-          hint="One per submission"
+          hint="Applied, interviewed, offered, hired or dropped"
         />
         <StatTile
-          label="Unique candidates"
-          value={formatCount(totals.uniqueCandidates)}
-          hint={
-            totals.applications !== totals.uniqueCandidates
-              ? `${totals.applications - totals.uniqueCandidates} re-applied`
-              : "No re-applications"
-          }
+          label="New applications"
+          value={totals.appliedInPeriod === null ? "—" : formatCount(totals.appliedInPeriod)}
+          hint="First applied in this period"
+        />
+        <StatTile
+          label="Dropped"
+          value={formatCount(totals.dropped)}
+          hint={`${formatPct(totals.applications ? (totals.dropped / totals.applications) * 100 : null)} of active candidates`}
         />
         <StatTile
           label="Pass-through"
           value={formatPct(totals.passThroughPct)}
           hint="Got past the first stage"
         />
-        <StatTile
-          label="Total dropped"
-          value={formatCount(totals.dropped)}
-          hint={`${formatPct(totals.applications ? (totals.dropped / totals.applications) * 100 : null)} of applications`}
-        />
       </div>
 
-      {report.outOfCohortDrops !== null && report.outOfCohortDrops > 0 && (
+      {/* Spell out what "this period" means, since the same candidate can
+          legitimately appear on more than one period's report. */}
+      {period.type !== "all" && (
         <p className="mt-4 text-xs font-medium text-slate-400">
-          A further {report.outOfCohortDrops} {pluralize(report.outOfCohortDrops, "drop was", "drops were")} recorded
-          in this period for candidates who applied earlier, and {pluralize(report.outOfCohortDrops, "is", "are")} not
-          counted above.
+          Covers every candidate the team acted on during {period.label} — applications received, interviews held,
+          offers made and drops decided. A candidate who applied earlier and was dropped in this period is counted
+          here.
         </p>
       )}
     </section>
