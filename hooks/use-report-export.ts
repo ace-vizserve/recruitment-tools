@@ -4,10 +4,14 @@ import { getFontEmbedCSS, toPng } from "html-to-image";
 import * as React from "react";
 import { toast } from "sonner";
 
-/** Safari silently returns a blank canvas past roughly this many pixels. */
-const MAX_CANVAS_PIXELS = 16_000_000;
-/** Matches the .report-exporting rule in globals.css. */
-const EXPORT_WIDTH = 1200;
+/**
+ * Canvas area ceiling. Tuned for desktop Chrome, which is what this internal
+ * tool runs on — Safari blanks the canvas at roughly 16M pixels, so an iPad
+ * export would need this lowered again.
+ */
+const MAX_CANVAS_PIXELS = 40_000_000;
+/** Matches the .report-exporting rule in globals.css — keep the two in step. */
+const EXPORT_WIDTH = 1600;
 
 function nextFrame(): Promise<void> {
   return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
@@ -44,9 +48,9 @@ export function useReportExport(nodeRef: React.RefObject<HTMLElement | null>, fi
 
       const width = EXPORT_WIDTH;
       const height = node.scrollHeight;
-      const pixelRatio = Math.min(2, Math.sqrt(MAX_CANVAS_PIXELS / Math.max(width * height, 1)));
+      const pixelRatio = Math.min(3, Math.sqrt(MAX_CANVAS_PIXELS / Math.max(width * height, 1)));
 
-      if (pixelRatio < 2) {
+      if (pixelRatio < 3) {
         toast.info("Report is large — exported at reduced resolution");
       }
 

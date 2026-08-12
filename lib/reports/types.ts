@@ -48,8 +48,6 @@ export interface StageReport {
   /** Share of `entered` that moved into the next stage. Null on the last stage. */
   conversionPct: number | null;
   dropReasons: DropReasonCount[];
-  /** True when `entered` is too small for percentages to mean anything. */
-  suppressPct: boolean;
 }
 
 export interface ReportJob {

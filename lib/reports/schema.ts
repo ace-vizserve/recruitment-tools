@@ -98,7 +98,19 @@ export type ReportPayload = z.infer<typeof ReportPayloadSchema>;
  * relayed untouched. lib/reports/manatal.ts maps these onto ReportPayload.
  * ----------------------------------------------------------------------- */
 
-const ManatalStageRefSchema = z.object({ id: z.number().optional(), name: z.string() }).loose();
+const ManatalStageRefSchema = z
+  .object({
+    id: z.number().optional(),
+    name: z.string(),
+    /**
+     * Which pipeline the stage belongs to. Manatal exposes no pipeline field
+     * on the job itself, so this nested id is the only way to look up the
+     * ordered stage list for a job. `.loose()` would keep it either way, but
+     * Zod types unrecognised keys as `unknown`, so declare it to read it.
+     */
+    job_pipeline: z.object({ id: z.union([z.string(), z.number()]) }).loose().nullish(),
+  })
+  .loose();
 
 export const ManatalMatchSchema = z
   .object({

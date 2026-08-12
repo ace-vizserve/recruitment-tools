@@ -62,6 +62,21 @@ function stageNameOf(match: ManatalMatch): string | null {
   return match.job_pipeline_stage?.name ?? match.stage?.name ?? null;
 }
 
+/**
+ * The pipeline a job runs on, read off its matches. Manatal puts no pipeline
+ * reference on the job resource, but every match's stage carries the parent
+ * pipeline, so any one of them will do.
+ *
+ * Returns null when there are no matches (a job nobody has applied to yet).
+ */
+export function findPipelineId(input: ManatalPayload["matches"]): string | number | null {
+  for (const match of flattenPages(input).matches) {
+    const id = match.job_pipeline_stage?.job_pipeline?.id ?? match.stage?.job_pipeline?.id;
+    if (id != null) return id;
+  }
+  return null;
+}
+
 export interface NormalizeOptions {
   /** Inclusive period bounds as UTC instants, already resolved for Singapore. */
   from: string;

@@ -15,7 +15,7 @@ export default function ToolsShell({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="pill-root pb-24 pt-16">
-      <div className="mx-auto max-w-[1440px] px-6">
+      <div className="mx-auto max-w-[1760px] px-6">
         <header className="mb-8 flex items-center justify-between gap-4">
           <div className="flex items-center gap-5">
             <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-blue-600 text-white shadow-xl shadow-blue-200">
