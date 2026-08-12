@@ -30,9 +30,6 @@ import type {
  */
 export const REPORTED_STAGES = ["New Candidates", "Paper Screening", "Initial Interview"] as const;
 
-/** Below this many candidates a percentage is noise, so we show counts only. */
-export const MIN_N_FOR_PERCENT = 5;
-
 /** Stage-shaped values that are really "left the pipeline", not a stage. */
 const NON_STAGE_NAMES = new Set(["rejected", "dropped", "declined", "withdrawn", "archived"]);
 
@@ -272,7 +269,6 @@ export function aggregateReport(payload: ReportPayload, options: AggregateOption
       droppedPct,
       conversionPct: index < stages.length - 1 ? safePct(passed, entered) : null,
       dropReasons: counts,
-      suppressPct: entered > 0 && entered < MIN_N_FOR_PERCENT,
     };
   });
 

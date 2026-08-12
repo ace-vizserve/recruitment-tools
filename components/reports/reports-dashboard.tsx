@@ -5,10 +5,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 
 import DropReasonsChart from "@/components/reports/charts/drop-reasons-chart";
-import PassDropChart from "@/components/reports/charts/pass-drop-chart";
 import StageFunnelChart from "@/components/reports/charts/stage-funnel-chart";
 import ReportFilters, { type ReportJobOption } from "@/components/reports/report-filters";
-import ReportNotes from "@/components/reports/report-notes";
 import {
   ReportDegradations,
   ReportEmpty,
@@ -22,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { useReportData } from "@/hooks/use-report-data";
 import { useReportExport } from "@/hooks/use-report-export";
 import { ENTITY_SLUGS, entity_list } from "@/lib/constants";
-import { formatDate, pluralize } from "@/lib/reports/format";
+import { formatDate } from "@/lib/reports/format";
 import {
   currentPeriod,
   isPeriodInProgress,
@@ -85,9 +83,11 @@ export default function ReportsDashboard() {
       setIsLoadingJobs(true);
       setJobsError(null);
       try {
-        // Empty status/is_published lifts the active-only default, because a
-        // job being reported on in September may have closed in August.
-        const response = await fetch(`/api/jobs?entity-id=${organizationId}&status=&is_published=`, {
+        // Active jobs only — the picker is for choosing what to report on next,
+        // and the full list was too long to scan. A closed job stays reachable
+        // by URL: jobOptions below synthesizes the option when it is missing.
+        // is_published stays empty so an unpublished-but-active job still lists.
+        const response = await fetch(`/api/jobs?entity-id=${organizationId}&status=active&is_published=`, {
           signal: controller.signal,
         });
         if (!response.ok) {
@@ -121,11 +121,29 @@ export default function ReportsDashboard() {
     periodKey,
   });
 
+  // Active first, then newest. The list is fetched active-only, but a closed
+  // job can still arrive via the deep-link fallback below, and Manatal's own
+  // statuses ("won", "lost") are not a single closed value to sort against.
+  const sortJobs = React.useCallback((list: ReportJobOption[]) => {
+    return [...list].sort((a, b) => {
+      const aActive = a.status?.toLowerCase() === "active" ? 0 : 1;
+      const bActive = b.status?.toLowerCase() === "active" ? 0 : 1;
+      if (aActive !== bActive) return aActive - bActive;
+
+      const aDate = a.created_at ? Date.parse(a.created_at) : NaN;
+      const bDate = b.created_at ? Date.parse(b.created_at) : NaN;
+      if (!Number.isNaN(aDate) && !Number.isNaN(bDate) && aDate !== bDate) return bDate - aDate;
+
+      return a.position_name.localeCompare(b.position_name);
+    });
+  }, []);
+
   // A shared link can name a job that isn't in this org's list (wrong org in
-  // the URL, or the job was archived out of the Manatal response). The report
-  // still loads, so show the job rather than leaving the picker looking blank.
+  // the URL, or the job is closed and so no longer fetched). The report still
+  // loads, so show the job rather than leaving the picker looking blank — and
+  // pin it first, so the job you asked for is never buried under the sort.
   const jobOptions = React.useMemo(() => {
-    if (!jobId || selectedJob) return jobs;
+    if (!jobId || selectedJob) return sortJobs(jobs);
     return [
       {
         id: Number(jobId),
@@ -133,9 +151,9 @@ export default function ReportsDashboard() {
         created_at: data?.job.createdAt,
         status: data?.job.status,
       },
-      ...jobs,
+      ...sortJobs(jobs),
     ];
-  }, [jobs, jobId, selectedJob, data]);
+  }, [jobs, jobId, selectedJob, data, sortJobs]);
 
   const jobCreatedAt = selectedJob?.created_at ?? data?.job.createdAt ?? null;
 
@@ -153,14 +171,6 @@ export default function ReportsDashboard() {
   const period = React.useMemo(() => resolvePeriod(periodType, periodKey), [periodType, periodKey]);
   const inProgress = isPeriodInProgress(period);
   const partialForJob = !inProgress && isPeriodPartialForJob(period, jobCreatedAt);
-
-  const reportedStageReports = data?.stageReports.filter((stage) => data.reportedStages.includes(stage.name)) ?? [];
-
-  // Opt-in via the URL so an "all stages" view survives a refresh and can be
-  // handed to someone else as a link.
-  const showAllStages = searchParams.get("stages") === "all";
-  const visibleStageReports = showAllStages ? (data?.stageReports ?? []) : reportedStageReports;
-  const extraStageCount = (data?.stageReports.length ?? 0) - reportedStageReports.length;
 
   return (
     <div>
@@ -226,65 +236,30 @@ export default function ReportsDashboard() {
 
             <StageFunnelChart stages={data.stageReports} isExporting={isExporting} />
 
-            <div className="grid gap-6 lg:grid-cols-2">
-              <PassDropChart stages={reportedStageReports} isExporting={isExporting} />
-              <DropReasonsChart
-                reasons={data.overallDropReasons}
-                dropCount={data.totals.dropped}
-                mentionCount={data.dropReasonMentions}
-                isExporting={isExporting}
-              />
-            </div>
-
+            {/* Straight after the distribution it breaks down, and covering the
+                whole pipeline — the reported-stages subset hid the back half of
+                the funnel, which is where offers and starts live. */}
             <div>
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-xl font-extrabold tracking-tight text-slate-800">Stage detail</h3>
-                  <p className="mt-0.5 text-sm font-medium text-slate-500">
-                    {showAllStages
-                      ? `All ${data.stages.length} stages in the pipeline.`
-                      : `The ${reportedStageReports.length} reported stages. ${extraStageCount} further ${pluralize(extraStageCount, "stage")} in this pipeline.`}
-                  </p>
-                </div>
-
-                {/* Chrome, so it stays out of the exported image — whichever
-                    set of cards is on screen is what gets captured. */}
-                {extraStageCount > 0 && (
-                  <div
-                    role="radiogroup"
-                    aria-label="Which stages to show"
-                    data-export-ignore="true"
-                    className="inline-flex gap-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm">
-                    {[
-                      { value: false, label: "Reported stages" },
-                      { value: true, label: "All stages" },
-                    ].map((option) => (
-                      <button
-                        key={String(option.value)}
-                        type="button"
-                        role="radio"
-                        aria-checked={showAllStages === option.value}
-                        onClick={() => setParams({ stages: option.value ? "all" : null })}
-                        className={`rounded-lg px-4 py-2 text-sm font-bold transition-colors ${
-                          showAllStages === option.value
-                            ? "bg-blue-50 text-blue-600"
-                            : "text-slate-500 hover:text-slate-800"
-                        }`}>
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
+              <div className="mb-4">
+                <h3 className="text-xl font-extrabold tracking-tight text-slate-800">Stage detail</h3>
+                <p className="mt-0.5 text-sm font-medium text-slate-500">
+                  All {data.stages.length} stages in the pipeline.
+                </p>
               </div>
 
               <div className="grid gap-6 lg:grid-cols-3">
-                {visibleStageReports.map((stage) => (
+                {data.stageReports.map((stage) => (
                   <StageSection key={stage.name} stage={stage} actor={STAGE_ACTORS[stage.name.toLowerCase()]} />
                 ))}
               </div>
             </div>
 
-            <ReportNotes jobId={jobId} periodKey={periodKey} />
+            <DropReasonsChart
+              reasons={data.overallDropReasons}
+              dropCount={data.totals.dropped}
+              mentionCount={data.dropReasonMentions}
+              isExporting={isExporting}
+            />
 
             {/* Makes a pasted screenshot self-describing. */}
             <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4 text-xs font-medium text-slate-400">

@@ -33,13 +33,11 @@ function Figure({
   label,
   count,
   pct,
-  suppressPct,
   color,
 }: {
   label: string;
   count: number;
   pct: number | null;
-  suppressPct: boolean;
   color?: string;
 }) {
   return (
@@ -50,9 +48,7 @@ function Figure({
       </p>
       <p className="mt-1.5 text-2xl font-extrabold tabular-nums text-slate-900">
         {formatCount(count)}
-        {!suppressPct && (
-          <span className="ml-2 text-base font-bold text-slate-400">{formatPct(pct)}</span>
-        )}
+        <span className="ml-2 text-base font-bold text-slate-400">{formatPct(pct)}</span>
       </p>
     </div>
   );
@@ -80,36 +76,15 @@ export default function StageSection({ stage, actor }: StageSectionProps) {
           <Meter stage={stage} />
 
           <div className="mt-6 grid gap-6 sm:grid-cols-3">
-            <Figure
-              label="Passed"
-              count={stage.passed}
-              pct={stage.passedPct}
-              suppressPct={stage.suppressPct}
-              color={OUTCOME_COLORS.passed}
-            />
+            <Figure label="Passed" count={stage.passed} pct={stage.passedPct} color={OUTCOME_COLORS.passed} />
             <Figure
               label="In stage"
               count={stage.inProgress}
               pct={stage.inProgressPct}
-              suppressPct={stage.suppressPct}
               color={OUTCOME_COLORS.inProgress}
             />
-            <Figure
-              label="Dropped"
-              count={stage.dropped}
-              pct={stage.droppedPct}
-              suppressPct={stage.suppressPct}
-              color={OUTCOME_COLORS.dropped}
-            />
+            <Figure label="Dropped" count={stage.dropped} pct={stage.droppedPct} color={OUTCOME_COLORS.dropped} />
           </div>
-
-          {/* Below ~5 candidates a percentage is noise, so it is withheld
-              rather than presented as if it meant something. */}
-          {stage.suppressPct && (
-            <p className="mt-4 text-xs font-medium text-slate-400">
-              Too few candidates for percentages to be meaningful — counts shown instead.
-            </p>
-          )}
 
           {topReasons.length > 0 && (
             <div className="mt-6 border-t border-slate-100 pt-5">

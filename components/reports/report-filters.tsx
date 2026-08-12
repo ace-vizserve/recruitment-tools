@@ -6,6 +6,7 @@ import * as React from "react";
 
 import PeriodPicker from "@/components/reports/period-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useActiveJobCounts } from "@/hooks/use-active-job-counts";
 import { entity_list } from "@/lib/constants";
 import type { PeriodType } from "@/lib/reports/period";
 
@@ -49,7 +50,17 @@ export default function ReportFilters({
   onPeriodTypeChange,
   onPeriodKeyChange,
 }: ReportFiltersProps) {
-  const orgs = React.useMemo(() => [...entity_list].sort((a, b) => a.name.localeCompare(b.name)), []);
+  const jobCounts = useActiveJobCounts();
+
+  // Busiest organization first, so the one you are most likely to report on is
+  // at the top. Alphabetical while the counts are still in flight, and for good
+  // if the request failed — the list must never sit empty or reshuffle into
+  // something arbitrary.
+  const orgs = React.useMemo(() => {
+    const byName = [...entity_list].sort((a, b) => a.name.localeCompare(b.name));
+    if (!jobCounts) return byName;
+    return byName.sort((a, b) => (jobCounts[String(b.id)] ?? 0) - (jobCounts[String(a.id)] ?? 0));
+  }, [jobCounts]);
 
   return (
     <div className="pill-card mb-8 p-6" data-export-ignore="true">
@@ -61,16 +72,29 @@ export default function ReportFilters({
               <SelectValue placeholder="Select organization" />
             </SelectTrigger>
             <SelectContent className="pill-select-content">
-              {orgs.map((org) => (
-                <SelectItem key={org.id} value={String(org.id)} className="pill-select-item">
-                  <span className="flex items-center gap-3">
-                    {org.logo && (
-                      <Image src={org.logo} alt="" width={24} height={24} className="h-6 w-6 object-contain" />
-                    )}
-                    <span className="font-semibold">{org.name}</span>
-                  </span>
-                </SelectItem>
-              ))}
+              {orgs.map((org) => {
+                const activeJobs = jobCounts?.[String(org.id)];
+                return (
+                  <SelectItem key={org.id} value={String(org.id)} className="pill-select-item">
+                    <span className="flex items-center gap-3">
+                      {org.logo && (
+                        <Image src={org.logo} alt="" width={24} height={24} className="h-6 w-6 object-contain" />
+                      )}
+                      <span className="font-semibold">{org.name}</span>
+                      {/* Says why the list is in this order. Omitted rather than
+                          shown as 0 when the count could not be fetched. */}
+                      {activeJobs !== undefined && (
+                        <span
+                          className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                            activeJobs > 0 ? "bg-green-50 text-green-600" : "bg-slate-100 text-slate-500"
+                          }`}>
+                          {activeJobs} active
+                        </span>
+                      )}
+                    </span>
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </div>

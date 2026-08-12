@@ -347,6 +347,6 @@
    width. Recharts' ResponsiveContainer measures the live width, so without
    this the export differs between a 1366px laptop and a 2560px monitor. */
 .report-exporting {
-  width: 1200px !important;
+  width: 1600px !important;
   max-width: none !important;
 }

@@ -3,7 +3,8 @@ import * as z from "zod";
 import { aggregateReport } from "@/lib/reports/aggregate";
 import { SAMPLE_MANATAL } from "@/lib/reports/fixtures/sample-manatal";
 import { SAMPLE_REPORT } from "@/lib/reports/fixtures/sample-report";
-import { normalizeManatalPayload } from "@/lib/reports/manatal";
+import { findPipelineId, normalizeManatalPayload } from "@/lib/reports/manatal";
+import { fetchPipelineStages } from "@/lib/reports/manatal-pipeline";
 import { isValidPeriodKey, resolvePeriod, type PeriodType } from "@/lib/reports/period";
 import {
   isManatalPayload,
@@ -129,7 +130,20 @@ export async function GET(request: Request) {
           { status: 502 },
         );
       }
-      const normalized = normalizeManatalPayload(parsed.data, {
+      // The pipeline is what makes the funnel complete: without it the stage
+      // order is derived from the candidates present, so a stage nobody has
+      // reached vanishes. When n8n did not relay it, fetch it ourselves and
+      // inject it, so normalizeManatalPayload takes its authoritative path and
+      // reports stagesDerived: false on its own.
+      let manatalPayload = parsed.data;
+      if (!manatalPayload.pipeline?.job_pipeline_stages?.length && !REPORTS_USE_FIXTURE) {
+        const stages = await fetchPipelineStages(findPipelineId(manatalPayload.matches), MANATAL_OPEN_API_KEY);
+        if (stages) {
+          manatalPayload = { ...manatalPayload, pipeline: { job_pipeline_stages: stages } };
+        }
+      }
+
+      const normalized = normalizeManatalPayload(manatalPayload, {
         from: period.from,
         to: period.to,
         jobId,

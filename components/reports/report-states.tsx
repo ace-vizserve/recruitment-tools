@@ -112,6 +112,12 @@ export function ReportDegradations({ items }: { items: Degradation[] }) {
         <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
         <span className="text-sm font-bold text-amber-700">Some data was incomplete</span>
       </div>
+      {/* Without this line the heading reads as "the report is wrong", and
+          people stop trusting figures that are fine. */}
+      <p className="mt-1 pl-8 text-xs font-medium text-amber-600">
+        These notes describe gaps in the data Manatal returned. Everything below is still accurate for the records
+        that were received.
+      </p>
       <ul className="mt-2 space-y-1 pl-8">
         {items.map((item) => (
           // Messages are self-contained sentences; the count is already inside

@@ -70,24 +70,15 @@ export default function StageFunnelChart({ stages, isExporting }: StageFunnelCha
       </ChartContainer>
 
       {/* Stage-to-stage conversion is the number people actually want from a
-          funnel, and it is not readable off bar heights. */}
-      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
-        {stages.slice(0, -1).map((stage, index) => (
-          <span key={stage.name} className="text-xs font-medium text-slate-400">
-            {stage.name} → {stages[index + 1].name}:{" "}
-            <span className="font-bold tabular-nums text-slate-600">
-              {stage.suppressPct ? "n too small" : formatPct(stage.conversionPct)}
-            </span>
-          </span>
-        ))}
-      </div>
-
+          funnel, and it is not readable off bar heights. It lives in the table
+          rather than a caption strip, which duplicated it. */}
       <ChartDataTable
+        caption="— no next stage, or no candidates entered this one."
         columns={["Stage", "Reached", "Conversion to next"]}
         rows={stages.map((stage) => [
           stage.name,
           stage.entered,
-          stage.conversionPct === null ? "—" : stage.suppressPct ? "n too small" : formatPct(stage.conversionPct),
+          stage.conversionPct === null ? "—" : formatPct(stage.conversionPct),
         ])}
       />
     </section>

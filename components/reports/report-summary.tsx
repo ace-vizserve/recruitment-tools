@@ -79,10 +79,13 @@ export default function ReportSummary({
           value={formatCount(totals.dropped)}
           hint={`${formatPct(totals.applications ? (totals.dropped / totals.applications) * 100 : null)} of active candidates`}
         />
+        {/* passThroughPct counts candidates whose furthest stage is past index
+            0 — i.e. they got out of the first stage and into the second — so
+            the tile names those two stages rather than saying "first stage". */}
         <StatTile
-          label="Pass-through"
+          label={`Pass-Through ${report.stages[1] ?? "Paper Screening"}`}
           value={formatPct(totals.passThroughPct)}
-          hint="Got past the first stage"
+          hint={`Got passed the ${report.stages[0] ?? "New Candidates"} stage`}
         />
       </div>
 
