@@ -33,13 +33,13 @@ export default function ChartDataTable({ caption, columns, rows }: ChartDataTabl
           instruction nobody can follow. */}
       <summary
         data-export-ignore="true"
-        className="cursor-pointer list-none text-xs font-bold uppercase tracking-widest text-slate-400 transition-colors hover:text-slate-600">
+        className="cursor-pointer list-none text-sm font-bold uppercase tracking-widest text-slate-500 transition-colors hover:text-slate-700">
         <span className="group-open:hidden">View data</span>
         <span className="hidden group-open:inline">Hide data</span>
       </summary>
       <div className="mt-3 overflow-x-auto">
         <Table>
-          {caption && <caption className="mt-2 text-xs font-medium text-slate-400">{caption}</caption>}
+          {caption && <caption className="mt-2 text-sm font-medium text-slate-600">{caption}</caption>}
           <TableHeader>
             <TableRow>
               {columns.map((column, index) => (
@@ -55,7 +55,11 @@ export default function ChartDataTable({ caption, columns, rows }: ChartDataTabl
                 {row.map((cell, cellIndex) => (
                   <TableCell
                     key={cellIndex}
-                    className={cellIndex === 0 ? "font-semibold text-slate-700" : "text-right tabular-nums"}>
+                    className={
+                      cellIndex === 0
+                        ? "text-base font-semibold text-slate-900"
+                        : "text-base font-medium text-right tabular-nums text-slate-900"
+                    }>
                     {cell}
                   </TableCell>
                 ))}

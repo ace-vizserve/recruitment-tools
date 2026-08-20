@@ -42,13 +42,13 @@ function Figure({
 }) {
   return (
     <div>
-      <p className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+      <p className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-600">
         {color && <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: color }} />}
         {label}
       </p>
-      <p className="mt-1.5 text-2xl font-extrabold tabular-nums text-slate-900">
+      <p className="mt-1.5 text-3xl font-extrabold tabular-nums text-slate-900">
         {formatCount(count)}
-        <span className="ml-2 text-base font-bold text-slate-400">{formatPct(pct)}</span>
+        <span className="ml-2 text-lg font-bold text-slate-600">{formatPct(pct)}</span>
       </p>
     </div>
   );
@@ -62,15 +62,15 @@ export default function StageSection({ stage, actor }: StageSectionProps) {
       {/* Stacked rather than a wrapping row, so the three stage cards line up
           with each other regardless of how long the stage name is. */}
       <div>
-        <h3 className="text-xl font-extrabold tracking-tight text-slate-800">{stage.name}</h3>
-        <p className="mt-1 text-sm font-bold uppercase tracking-widest text-blue-500">
+        <h3 className="text-2xl font-extrabold tracking-tight text-slate-900">{stage.name}</h3>
+        <p className="mt-1 text-base font-bold uppercase tracking-widest text-blue-600">
           {formatCount(stage.entered)} {pluralize(stage.entered, "candidate")}
         </p>
-        {actor && <p className="mt-1 text-sm font-medium text-slate-500">{actor}</p>}
+        {actor && <p className="mt-1 text-base font-medium text-slate-600">{actor}</p>}
       </div>
 
       {stage.entered === 0 ? (
-        <p className="mt-6 text-sm font-medium text-slate-400">No candidates reached this stage in this period.</p>
+        <p className="mt-6 text-base font-medium text-slate-600">No candidates reached this stage in this period.</p>
       ) : (
         <>
           <Meter stage={stage} />
@@ -88,17 +88,17 @@ export default function StageSection({ stage, actor }: StageSectionProps) {
 
           {topReasons.length > 0 && (
             <div className="mt-6 border-t border-slate-100 pt-5">
-              <p className="text-xs font-black uppercase tracking-widest text-slate-400">Drop reasons</p>
+              <p className="text-sm font-black uppercase tracking-widest text-slate-700">Drop reasons</p>
               <ul className="mt-3 space-y-1.5">
                 {topReasons.map((reason) => (
-                  <li key={reason.reason} className="flex items-baseline justify-between gap-4 text-sm">
-                    <span className="font-medium text-slate-600">{reason.reason}</span>
-                    <span className="font-bold tabular-nums text-slate-900">{reason.count}</span>
+                  <li key={reason.reason} className="flex items-baseline justify-between gap-4 text-base">
+                    <span className="font-semibold text-slate-900">{reason.reason}</span>
+                    <span className="font-extrabold tabular-nums text-slate-900">{reason.count}</span>
                   </li>
                 ))}
               </ul>
               {stage.dropReasons.length > topReasons.length && (
-                <p className="mt-2 text-xs font-medium text-slate-400">
+                <p className="mt-2 text-sm font-medium text-slate-600">
                   +{stage.dropReasons.length - topReasons.length} more, shown in the drop reasons chart.
                 </p>
               )}

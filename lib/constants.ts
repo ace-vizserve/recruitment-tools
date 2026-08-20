@@ -9,6 +9,25 @@ export const ENTITY_SLUGS: Record<number, string> = {
   3779177: "vizschool",
 };
 
+/**
+ * Manatal organization id → a logo served from this app's own /public.
+ *
+ * Deliberately not `entity_list[].logo`, which points at hfse.edu.sg: the
+ * report is rasterised for the PDF export, and html-to-image has to re-fetch
+ * every image it meets. A cross-origin PNG without CORS headers comes back
+ * empty and the logo drops out of the download. Same-origin files always
+ * survive the capture.
+ */
+export const ENTITY_LOGOS: Record<number, string> = {
+  3779178: "/logos/hapi-haus-logo.png",
+  3779180: "/logos/hapi-space-logo.png",
+  3779176: "/logos/hfse-global-academy-logo.png",
+  3779172: "/logos/hfse-logo.png",
+  3779173: "/logos/ys-logo.png",
+  3779179: "/logos/hapi-co-logo.png",
+  3779177: "/logos/vizschool-logo.png",
+};
+
 export const entity_list = [
   {
     id: 3779178,

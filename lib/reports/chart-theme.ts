@@ -25,9 +25,16 @@ export const OUTCOME_COLORS = {
   dropped: "#d03b3b",
 } as const;
 
-/** Chart chrome. Ink is slate-900, matching the app's text colour. */
+/**
+ * Chart chrome. Ink is slate-900, matching the app's text colour.
+ *
+ * MUTED_INK is slate-700, not a light warm grey: the export is a 1:1 raster of
+ * the screen, so anything that reads as a soft de-emphasis on a backlit display
+ * comes out of a printer as barely-there grey. Axis and value labels carry the
+ * numbers, so they get a colour that survives toner.
+ */
 export const INK = "#0f172a";
-export const MUTED_INK = "#898781";
+export const MUTED_INK = "#334155";
 export const GRID = "#e1e0d9";
 export const AXIS = "#c3c2b7";
 export const SURFACE = "#ffffff";
@@ -56,6 +63,15 @@ export function funnelRamp(stageCount: number): string[] {
  * length as hue and burn the only free channel, so every bar is the same.
  */
 export const dropReasonColor = () => PRIMARY;
+
+/**
+ * Chart type sizes. Recharts takes numbers, not classes, so the print pass has
+ * to live here rather than in Tailwind. The value labels are the numbers people
+ * actually read off a printed sheet, so they are set a step above the axis
+ * labels that frame them.
+ */
+export const AXIS_LABEL_SIZE = 15;
+export const VALUE_LABEL_SIZE = 17;
 
 /** Bars past this many are folded into an "Other" row. */
 export const MAX_DROP_REASON_BARS = 7;

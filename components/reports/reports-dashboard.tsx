@@ -53,7 +53,7 @@ function ReportFootnote({
   organizationName?: string | null;
 }) {
   return (
-    <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4 text-xs font-medium text-slate-400">
+    <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-4 text-sm font-medium text-slate-600">
       <span>
         {organizationName ?? report.job.organizationName ?? "HFSE"} · {jobTitle ?? report.job.title} ·{" "}
         {report.period.label}
@@ -261,6 +261,7 @@ export default function ReportsDashboard() {
                 asOfLabel={formatDate(new Date().toISOString())}
                 jobTitle={selectedJob?.position_name}
                 organizationName={selectedOrgName}
+                organizationId={organizationId}
               />
 
               <StageFunnelChart stages={data.stageReports} isExporting={isExporting} />
@@ -272,8 +273,8 @@ export default function ReportsDashboard() {
             <div className="space-y-6">
               <div>
                 <div className="mb-4">
-                  <h3 className="text-xl font-extrabold tracking-tight text-slate-800">Stage detail</h3>
-                  <p className="mt-0.5 text-sm font-medium text-slate-500">
+                  <h3 className="text-2xl font-extrabold tracking-tight text-slate-900">Stage detail</h3>
+                  <p className="mt-1 text-base font-medium text-slate-600">
                     All {data.stages.length} stages in the pipeline.
                   </p>
                 </div>
