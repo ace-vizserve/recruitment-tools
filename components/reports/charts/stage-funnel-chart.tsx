@@ -12,6 +12,41 @@ const CHART_CONFIG = {
   entered: { label: "Reached stage", color: PRIMARY },
 } satisfies ChartConfig;
 
+/** Roughly what fits under one bar at 12px before the labels touch. */
+const TICK_LINE_CHARS = 13;
+
+function wrapStageName(name: string): string[] {
+  const lines: string[] = [];
+  for (const word of name.split(/\s+/)) {
+    const last = lines[lines.length - 1];
+    if (last && `${last} ${word}`.length <= TICK_LINE_CHARS) lines[lines.length - 1] = `${last} ${word}`;
+    else lines.push(word);
+  }
+  return lines;
+}
+
+/**
+ * A stage nobody reached draws no bar, so its name on the axis is the only
+ * thing marking it — and Recharts' default tick placement drops exactly the
+ * labels that would collide, which is how "RC/BC" vanished from a ten-stage
+ * pipeline while its empty slot stayed. interval={0} on the axis forces every
+ * stage to be named; wrapping onto a second line is what keeps them apart
+ * once forced.
+ */
+function StageTick({ x, y, payload }: { x?: number; y?: number; payload?: { value?: string | number } }) {
+  const lines = wrapStageName(String(payload?.value ?? ""));
+
+  return (
+    <text x={x} y={y} textAnchor="middle" fill={MUTED_INK} fontSize={12}>
+      {lines.map((line, index) => (
+        <tspan key={line} x={x} dy={index === 0 ? 14 : 13}>
+          {line}
+        </tspan>
+      ))}
+    </text>
+  );
+}
+
 interface StageFunnelChartProps {
   /** The whole pipeline, not just the reported stages. */
   stages: StageReport[];
@@ -36,14 +71,13 @@ export default function StageFunnelChart({ stages, isExporting }: StageFunnelCha
       <ChartContainer config={CHART_CONFIG} className="mt-6 aspect-auto h-64 w-full">
         <BarChart data={data} margin={{ left: 8, right: 8, top: 24, bottom: 8 }} barCategoryGap="24%">
           <CartesianGrid stroke={GRID} vertical={false} strokeDasharray={undefined} />
-          {/* No interval={0}: forcing every label makes them collide on narrow
-              screens. Recharts drops what doesn't fit, and the conversion
-              captions plus the data table below name every stage anyway. */}
           <XAxis
             dataKey="stage"
             tickLine={false}
             axisLine={false}
-            tick={{ fill: MUTED_INK, fontSize: 12 }}
+            interval={0}
+            height={48}
+            tick={<StageTick />}
           />
           <YAxis
             allowDecimals={false}

@@ -30,6 +30,7 @@ import {
   resolvePeriod,
   type PeriodType,
 } from "@/lib/reports/period";
+import type { ReportAggregate } from "@/lib/reports/types";
 
 /** Who acts at each stage — context the counts alone don't carry. */
 const STAGE_ACTORS: Record<string, string> = {
@@ -37,6 +38,30 @@ const STAGE_ACTORS: Record<string, string> = {
   "paper screening": "Reviewed by department heads",
   "initial interview": "Evaluated by interviewers",
 };
+
+/**
+ * Names what you are looking at. Repeated on every export page, because a PDF
+ * page gets read — and forwarded — on its own.
+ */
+function ReportFootnote({
+  report,
+  jobTitle,
+  organizationName,
+}: {
+  report: ReportAggregate;
+  jobTitle?: string | null;
+  organizationName?: string | null;
+}) {
+  return (
+    <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4 text-xs font-medium text-slate-400">
+      <span>
+        {organizationName ?? report.job.organizationName ?? "HFSE"} · {jobTitle ?? report.job.title} ·{" "}
+        {report.period.label}
+      </span>
+      <span>Generated {formatDate(report.meta.generatedAt)}</span>
+    </footer>
+  );
+}
 
 export default function ReportsDashboard() {
   const router = useRouter();
@@ -163,9 +188,9 @@ export default function ReportsDashboard() {
 
   const captureRef = React.useRef<HTMLDivElement>(null);
   const orgSlug = organizationId ? (ENTITY_SLUGS[Number(organizationId)] ?? organizationId) : "hfse";
-  const { exportPng, isExporting } = useReportExport(
+  const { exportPdf, isExporting } = useReportExport(
     captureRef,
-    `hfse-report_${orgSlug}_${jobId ?? "job"}_${periodKey}.png`,
+    `hfse-report_${orgSlug}_${jobId ?? "job"}_${periodKey}.pdf`,
   );
 
   const period = React.useMemo(() => resolvePeriod(periodType, periodKey), [periodType, periodKey]);
@@ -202,7 +227,7 @@ export default function ReportsDashboard() {
       ) : (
         <>
           <div className="mb-6 flex justify-end" data-export-ignore="true">
-            <Button onClick={exportPng} disabled={isExporting} className="pill-btn-primary">
+            <Button onClick={exportPdf} disabled={isExporting} className="pill-btn-primary">
               {isExporting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -211,64 +236,66 @@ export default function ReportsDashboard() {
               ) : (
                 <>
                   <Download className="h-4 w-4" />
-                  Download report image
+                  Download report PDF
                 </>
               )}
             </Button>
           </div>
 
-          {/* Everything inside this node ends up in the PNG. Keep the shell
-              header, tab bar, filter row and this page's buttons outside it. */}
+          {/* Everything inside this node ends up in the PDF. Keep the shell
+              header, tab bar, filter row and this page's buttons outside it.
+              Each [data-export-page] child becomes one page of the export —
+              on screen they simply stack, so the split costs the reader
+              nothing. */}
           <div
             ref={captureRef}
             className={`rounded-xl p-4 space-y-6 bg-white transition-opacity ${isRefetching ? "pointer-events-none opacity-60" : ""}`}
             style={{ backgroundColor: "#ffffff" }}>
-            <ReportDegradations items={data.meta.degradations} />
+            <div data-export-page="summary" className="space-y-6">
+              <ReportDegradations items={data.meta.degradations} />
 
-            <ReportSummary
-              report={data}
-              inProgress={inProgress}
-              partialForJob={partialForJob}
-              asOfLabel={formatDate(new Date().toISOString())}
-              jobTitle={selectedJob?.position_name}
-              organizationName={selectedOrgName}
-            />
+              <ReportSummary
+                report={data}
+                inProgress={inProgress}
+                partialForJob={partialForJob}
+                asOfLabel={formatDate(new Date().toISOString())}
+                jobTitle={selectedJob?.position_name}
+                organizationName={selectedOrgName}
+              />
 
-            <StageFunnelChart stages={data.stageReports} isExporting={isExporting} />
+              <StageFunnelChart stages={data.stageReports} isExporting={isExporting} />
 
-            {/* Straight after the distribution it breaks down, and covering the
-                whole pipeline — the reported-stages subset hid the back half of
-                the funnel, which is where offers and starts live. */}
-            <div>
-              <div className="mb-4">
-                <h3 className="text-xl font-extrabold tracking-tight text-slate-800">Stage detail</h3>
-                <p className="mt-0.5 text-sm font-medium text-slate-500">
-                  All {data.stages.length} stages in the pipeline.
-                </p>
-              </div>
-
-              <div className="grid gap-6 lg:grid-cols-3">
-                {data.stageReports.map((stage) => (
-                  <StageSection key={stage.name} stage={stage} actor={STAGE_ACTORS[stage.name.toLowerCase()]} />
-                ))}
-              </div>
+              <ReportFootnote report={data} jobTitle={selectedJob?.position_name} organizationName={selectedOrgName} />
             </div>
 
-            <DropReasonsChart
-              reasons={data.overallDropReasons}
-              dropCount={data.totals.dropped}
-              mentionCount={data.dropReasonMentions}
-              isExporting={isExporting}
-            />
+            <div data-export-page="detail" className="space-y-6">
+              {/* Straight after the distribution it breaks down, and covering
+                  the whole pipeline — the reported-stages subset hid the back
+                  half of the funnel, which is where offers and starts live. */}
+              <div>
+                <div className="mb-4">
+                  <h3 className="text-xl font-extrabold tracking-tight text-slate-800">Stage detail</h3>
+                  <p className="mt-0.5 text-sm font-medium text-slate-500">
+                    All {data.stages.length} stages in the pipeline.
+                  </p>
+                </div>
 
-            {/* Makes a pasted screenshot self-describing. */}
-            <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4 text-xs font-medium text-slate-400">
-              <span>
-                {selectedOrgName ?? data.job.organizationName ?? "HFSE"} ·{" "}
-                {selectedJob?.position_name ?? data.job.title} · {data.period.label}
-              </span>
-              <span>Generated {formatDate(data.meta.generatedAt)}</span>
-            </footer>
+                <div className="grid gap-6 lg:grid-cols-3">
+                  {data.stageReports.map((stage) => (
+                    <StageSection key={stage.name} stage={stage} actor={STAGE_ACTORS[stage.name.toLowerCase()]} />
+                  ))}
+                </div>
+              </div>
+
+              <DropReasonsChart
+                reasons={data.overallDropReasons}
+                dropCount={data.totals.dropped}
+                mentionCount={data.dropReasonMentions}
+                isExporting={isExporting}
+              />
+
+              <ReportFootnote report={data} jobTitle={selectedJob?.position_name} organizationName={selectedOrgName} />
+            </div>
           </div>
 
           {process.env.NODE_ENV !== "production" && searchParams.get("debug") === "1" && (
