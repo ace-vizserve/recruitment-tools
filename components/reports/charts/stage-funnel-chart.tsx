@@ -15,12 +15,31 @@ const CHART_CONFIG = {
 /** Roughly what fits under one bar at 12px before the labels touch. */
 const TICK_LINE_CHARS = 13;
 
+/** Two lines is what fits between the bars and the section below. */
+const TICK_MAX_LINES = 2;
+
+/**
+ * Manatal stage names carry their own gloss — "RC/BC (Reference Check/
+ * Background Check)". Under one bar that wraps to four lines and runs off the
+ * bottom of the axis, so the axis shows the short name and the data table
+ * below prints every stage in full.
+ */
+function shortenStageName(name: string): string {
+  return name.replace(/\s*\([^)]*\)\s*$/, "").trim() || name;
+}
+
 function wrapStageName(name: string): string[] {
   const lines: string[] = [];
-  for (const word of name.split(/\s+/)) {
+  for (const word of shortenStageName(name).split(/\s+/)) {
     const last = lines[lines.length - 1];
     if (last && `${last} ${word}`.length <= TICK_LINE_CHARS) lines[lines.length - 1] = `${last} ${word}`;
     else lines.push(word);
+  }
+
+  // A name that still doesn't fit is truncated rather than allowed to spill
+  // over the section below it.
+  if (lines.length > TICK_MAX_LINES) {
+    return [...lines.slice(0, TICK_MAX_LINES - 1), `${lines[TICK_MAX_LINES - 1]}…`];
   }
   return lines;
 }
@@ -39,7 +58,7 @@ function StageTick({ x, y, payload }: { x?: number; y?: number; payload?: { valu
   return (
     <text x={x} y={y} textAnchor="middle" fill={MUTED_INK} fontSize={12}>
       {lines.map((line, index) => (
-        <tspan key={line} x={x} dy={index === 0 ? 14 : 13}>
+        <tspan key={`${index}-${line}`} x={x} dy={index === 0 ? 14 : 13}>
           {line}
         </tspan>
       ))}

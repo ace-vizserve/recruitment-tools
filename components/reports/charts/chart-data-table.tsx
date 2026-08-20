@@ -11,23 +11,29 @@ interface ChartDataTableProps {
 }
 
 /**
- * The table twin every chart carries. Two reasons it is not optional: every
- * value stays reachable without hovering, and an open table renders into the
- * downloaded PNG, where tooltips obviously cannot.
+ * The table twin every chart carries. It is not optional: it is where every
+ * value stays reachable without hovering, and it is the only way the numbers
+ * reach the exported PDF, where tooltips obviously cannot.
  *
- * Open by default, so the numbers are in the exported image without anyone
- * having to remember to expand it first. State rather than a bare `open`
- * attribute: React re-applies a static prop on every re-render, which would
- * silently reopen the table each time the report refetches.
+ * Collapsed by default — the charts are what the page is for, and two open
+ * tables pushed them apart. Expanding one sticks, and the export follows what
+ * is on screen, so an expanded table is still what you download. State rather
+ * than a bare `open` attribute: React re-applies a static prop on every
+ * re-render, which would silently reset the table each time the report
+ * refetches.
  */
 export default function ChartDataTable({ caption, columns, rows }: ChartDataTableProps) {
-  const [open, setOpen] = React.useState(true);
+  const [open, setOpen] = React.useState(false);
 
   if (!rows.length) return null;
 
   return (
     <details open={open} onToggle={(event) => setOpen(event.currentTarget.open)} className="mt-4 group">
-      <summary className="cursor-pointer list-none text-xs font-bold uppercase tracking-widest text-slate-400 transition-colors hover:text-slate-600">
+      {/* A control, not content — "View data" in a downloaded PDF is an
+          instruction nobody can follow. */}
+      <summary
+        data-export-ignore="true"
+        className="cursor-pointer list-none text-xs font-bold uppercase tracking-widest text-slate-400 transition-colors hover:text-slate-600">
         <span className="group-open:hidden">View data</span>
         <span className="hidden group-open:inline">Hide data</span>
       </summary>

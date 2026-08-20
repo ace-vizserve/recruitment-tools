@@ -342,11 +342,31 @@
   margin-top: 5px;
 }
 
-/* Applied by useReportExport for the duration of a PNG capture, so the
-   downloaded image has the same layout regardless of the viewer's window
-   width. Recharts' ResponsiveContainer measures the live width, so without
-   this the export differs between a 1366px laptop and a 2560px monitor. */
+/* Applied by useReportExport for the duration of a PDF capture. The width is
+   set by the hook to the node's own width — so downloading does not reflow the
+   page under the reader — floored at a size the report can still lay out at.
+   It is pinned rather than left alone because Recharts' ResponsiveContainer
+   re-measures on any width change mid-capture. */
 .report-exporting {
-  width: 1600px !important;
+  width: var(--report-export-width, 1600px) !important;
   max-width: none !important;
+}
+
+/* Pinning the width above resizes every scroll container underneath, and any
+   that ends up overflowing paints a scrollbar straight into the capture —
+   html-to-image renders the DOM as it stands, scrollbars included. Letting
+   them overflow visibly removes the bar without clipping what it was there
+   to reach. */
+.report-exporting :is([class*="overflow-x-auto"], [class*="overflow-y-auto"], [class*="overflow-auto"]) {
+  overflow: visible !important;
+}
+
+.report-exporting,
+.report-exporting * {
+  scrollbar-width: none !important;
+}
+
+.report-exporting::-webkit-scrollbar,
+.report-exporting *::-webkit-scrollbar {
+  display: none !important;
 }

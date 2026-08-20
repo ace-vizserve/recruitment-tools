@@ -268,10 +268,10 @@ export default function ReportsDashboard() {
               <ReportFootnote report={data} jobTitle={selectedJob?.position_name} organizationName={selectedOrgName} />
             </div>
 
+            {/* Straight after the distribution it breaks down, and covering
+                the whole pipeline — the reported-stages subset hid the back
+                half of the funnel, which is where offers and starts live. */}
             <div data-export-page="detail" className="space-y-6">
-              {/* Straight after the distribution it breaks down, and covering
-                  the whole pipeline — the reported-stages subset hid the back
-                  half of the funnel, which is where offers and starts live. */}
               <div>
                 <div className="mb-4">
                   <h3 className="text-xl font-extrabold tracking-tight text-slate-800">Stage detail</h3>

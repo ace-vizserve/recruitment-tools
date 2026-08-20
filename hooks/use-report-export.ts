@@ -10,13 +10,21 @@ import { toast } from "sonner";
  * export would need this lowered again.
  */
 const MAX_CANVAS_PIXELS = 40_000_000;
-/** Matches the .report-exporting rule in globals.css — keep the two in step. */
-const EXPORT_WIDTH = 1600;
 
-/** A4 landscape, in points. Landscape because the report renders 1600px wide. */
+/**
+ * Floor for the capture width, fed to the .report-exporting rule in
+ * globals.css. The dashboard exports at whatever width it is already showing —
+ * clicking download must not visibly reflow the page — so this only ever
+ * widens a narrow window, where the stage-detail grid would otherwise collapse
+ * to a single tall column and drag the whole document's scale down with it.
+ */
+const MIN_EXPORT_WIDTH = 1200;
+const EXPORT_WIDTH_VAR = "--report-export-width";
+
+/** A4 landscape, in points. Landscape because the report is a wide layout. */
 const PAGE_WIDTH = 841.89;
 const PAGE_HEIGHT = 595.28;
-const PAGE_MARGIN = 24;
+const PAGE_MARGIN = 18;
 
 /**
  * Each element carrying this attribute becomes one page of the PDF, in DOM
@@ -56,8 +64,12 @@ export function useReportExport(nodeRef: React.RefObject<HTMLElement | null>, fi
       await nextFrame();
       await document.fonts.ready;
 
-      // Pin the width so the pages are identical from any window size —
-      // ResponsiveContainer otherwise measures whatever the viewport gives it.
+      // Widen only if the window is too narrow to lay the report out properly;
+      // at any normal size this resolves to the width the node already has, so
+      // nothing on screen moves while the capture runs. Recharts is the reason
+      // it has to be pinned at all rather than left to float: ResponsiveContainer
+      // re-measures on any width change and the charts would resize mid-capture.
+      node.style.setProperty(EXPORT_WIDTH_VAR, `${Math.max(node.offsetWidth, MIN_EXPORT_WIDTH)}px`);
       node.classList.add("report-exporting");
       await nextFrame();
 
@@ -72,9 +84,10 @@ export function useReportExport(nodeRef: React.RefObject<HTMLElement | null>, fi
       const rendered: { dataUrl: string; width: number; height: number }[] = [];
 
       for (const page of pages) {
-        // Measured rather than assumed: a page is a child of the pinned node,
-        // so it is EXPORT_WIDTH minus that node's padding.
-        const width = Math.ceil(page.getBoundingClientRect().width) || EXPORT_WIDTH;
+        // offsetWidth, not getBoundingClientRect: the layout width is what
+        // html-to-image serialises, and it is free of the sub-pixel fractions
+        // that make a scroll container think it overflows.
+        const width = page.offsetWidth || MIN_EXPORT_WIDTH;
         const height = page.scrollHeight;
         const pixelRatio = Math.min(3, Math.sqrt(MAX_CANVAS_PIXELS / Math.max(width * height, 1)));
         if (pixelRatio < 3) reducedResolution = true;
@@ -103,22 +116,34 @@ export function useReportExport(nodeRef: React.RefObject<HTMLElement | null>, fi
       const { jsPDF } = await import("jspdf");
       const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
 
+      const maxWidth = PAGE_WIDTH - PAGE_MARGIN * 2;
+      const maxHeight = PAGE_HEIGHT - PAGE_MARGIN * 2;
+
+      // One scale for the whole document, set by whichever section is worst off
+      // — so every page lands at the same width and the report reads as one
+      // document rather than a run of differently-zoomed screenshots. The
+      // alternative, scaling each page to fill its own sheet, silently shrinks
+      // a tall section sideways. Fit whole, never crop: a section stays intact
+      // rather than spilling half of itself onto the next page.
+      const scale = rendered.reduce(
+        (smallest, page) => Math.min(smallest, maxWidth / page.width, maxHeight / page.height),
+        Number.POSITIVE_INFINITY,
+      );
+
       rendered.forEach((page, index) => {
         if (index > 0) doc.addPage();
 
-        // Fit whole, never crop: a section that runs tall shrinks rather than
-        // spilling half of itself onto the next page.
-        const maxWidth = PAGE_WIDTH - PAGE_MARGIN * 2;
-        const maxHeight = PAGE_HEIGHT - PAGE_MARGIN * 2;
-        const scale = Math.min(maxWidth / page.width, maxHeight / page.height);
         const width = page.width * scale;
         const height = page.height * scale;
 
+        // Centred both ways. A page held back by the shared scale has spare
+        // room on the sheet, and centred space reads as deliberate where a
+        // block pinned to the top edge reads as a rendering accident.
         doc.addImage(
           page.dataUrl,
           "PNG",
           (PAGE_WIDTH - width) / 2,
-          PAGE_MARGIN,
+          (PAGE_HEIGHT - height) / 2,
           width,
           height,
           undefined,
@@ -136,6 +161,7 @@ export function useReportExport(nodeRef: React.RefObject<HTMLElement | null>, fi
       });
     } finally {
       nodeRef.current?.classList.remove("report-exporting");
+      nodeRef.current?.style.removeProperty(EXPORT_WIDTH_VAR);
       setIsExporting(false);
     }
   }, [nodeRef, filename, isExporting]);
