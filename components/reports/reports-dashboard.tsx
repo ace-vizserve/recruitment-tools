@@ -40,8 +40,8 @@ const STAGE_ACTORS: Record<string, string> = {
 };
 
 /**
- * Names what you are looking at. Repeated on every export page, because a PDF
- * page gets read — and forwarded — on its own.
+ * Names what you are looking at. It closes the export, because a downloaded
+ * PDF gets read — and forwarded — away from the filters that produced it.
  */
 function ReportFootnote({
   report,
@@ -242,16 +242,16 @@ export default function ReportsDashboard() {
             </Button>
           </div>
 
-          {/* Everything inside this node ends up in the PDF. Keep the shell
-              header, tab bar, filter row and this page's buttons outside it.
-              Each [data-export-page] child becomes one page of the export —
-              on screen they simply stack, so the split costs the reader
-              nothing. */}
+          {/* Everything inside this node ends up in the PDF, as a single
+              page. Keep the shell header, tab bar, filter row and this page's
+              buttons outside it. The two blocks below are grouping only — put
+              data-export-page back on them to split the download into a page
+              each. */}
           <div
             ref={captureRef}
             className={`rounded-xl p-4 space-y-6 bg-white transition-opacity ${isRefetching ? "pointer-events-none opacity-60" : ""}`}
             style={{ backgroundColor: "#ffffff" }}>
-            <div data-export-page="summary" className="space-y-6">
+            <div className="space-y-6">
               <ReportDegradations items={data.meta.degradations} />
 
               <ReportSummary
@@ -264,14 +264,12 @@ export default function ReportsDashboard() {
               />
 
               <StageFunnelChart stages={data.stageReports} isExporting={isExporting} />
-
-              <ReportFootnote report={data} jobTitle={selectedJob?.position_name} organizationName={selectedOrgName} />
             </div>
 
             {/* Straight after the distribution it breaks down, and covering
                 the whole pipeline — the reported-stages subset hid the back
                 half of the funnel, which is where offers and starts live. */}
-            <div data-export-page="detail" className="space-y-6">
+            <div className="space-y-6">
               <div>
                 <div className="mb-4">
                   <h3 className="text-xl font-extrabold tracking-tight text-slate-800">Stage detail</h3>

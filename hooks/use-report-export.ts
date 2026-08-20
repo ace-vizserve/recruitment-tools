@@ -21,10 +21,14 @@ const MAX_CANVAS_PIXELS = 40_000_000;
 const MIN_EXPORT_WIDTH = 1200;
 const EXPORT_WIDTH_VAR = "--report-export-width";
 
-/** A4 landscape, in points. Landscape because the report is a wide layout. */
+/** A4 landscape, in points — the fallback sheet for a split export. */
 const PAGE_WIDTH = 841.89;
 const PAGE_HEIGHT = 595.28;
 const PAGE_MARGIN = 18;
+/** CSS pixels to PDF points: 96dpi CSS against PDF's 72dpi user space. */
+const PX_TO_PT = 0.75;
+/** PDF's own ceiling on a page dimension — 14,400pt, or 200 inches a side. */
+const MAX_SHEET_PT = 14_400;
 
 /**
  * Each element carrying this attribute becomes one page of the PDF, in DOM
@@ -114,10 +118,31 @@ export function useReportExport(nodeRef: React.RefObject<HTMLElement | null>, fi
       }
 
       const { jsPDF } = await import("jspdf");
-      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
 
-      const maxWidth = PAGE_WIDTH - PAGE_MARGIN * 2;
-      const maxHeight = PAGE_HEIGHT - PAGE_MARGIN * 2;
+      // A one-page export gets a sheet cut to the report instead of an A4 one.
+      // Forcing ~2,800px of dashboard onto a single A4 would land the body text
+      // near 4pt; cutting the sheet to fit keeps it at full size for the screen,
+      // which is where these are read. Printing scales to whatever paper is in
+      // the tray either way, so nothing is lost by it. A split export stays on
+      // A4, so its pages match each other.
+      // 1:1 with the screen, unless the report has grown long enough to run
+      // past what a PDF page is allowed to be, in which case it shrinks to the
+      // ceiling rather than emitting a page no reader will open.
+      const single = rendered.length === 1 ? rendered[0] : null;
+      const sheetScale = single
+        ? Math.min(PX_TO_PT, (MAX_SHEET_PT - PAGE_MARGIN * 2) / Math.max(single.width, single.height))
+        : PX_TO_PT;
+      const sheetWidth = single ? single.width * sheetScale + PAGE_MARGIN * 2 : PAGE_WIDTH;
+      const sheetHeight = single ? single.height * sheetScale + PAGE_MARGIN * 2 : PAGE_HEIGHT;
+
+      const doc = new jsPDF({
+        orientation: sheetWidth >= sheetHeight ? "landscape" : "portrait",
+        unit: "pt",
+        format: single ? [sheetWidth, sheetHeight] : "a4",
+      });
+
+      const maxWidth = sheetWidth - PAGE_MARGIN * 2;
+      const maxHeight = sheetHeight - PAGE_MARGIN * 2;
 
       // One scale for the whole document, set by whichever section is worst off
       // — so every page lands at the same width and the report reads as one
@@ -142,8 +167,8 @@ export function useReportExport(nodeRef: React.RefObject<HTMLElement | null>, fi
         doc.addImage(
           page.dataUrl,
           "PNG",
-          (PAGE_WIDTH - width) / 2,
-          (PAGE_HEIGHT - height) / 2,
+          (sheetWidth - width) / 2,
+          (sheetHeight - height) / 2,
           width,
           height,
           undefined,
