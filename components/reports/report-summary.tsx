@@ -44,13 +44,16 @@ export default function ReportSummary({
   const displayOrg = organizationName || job.organizationName;
   const logo = ENTITY_LOGOS[Number(organizationId ?? job.organizationId)] ?? null;
 
-  // The label names the window; the parenthetical gives the two real dates
-  // that bound it — job creation on the left, today on the right — so an
-  // exported sheet dates itself without the filter row to consult. Manatal
+  // Only "all time" needs the parenthetical. A weekly or monthly label already
+  // names its own window, so spelling out job-creation-to-today beside it
+  // contradicts the heading; "all time" names no dates at all, and there the
+  // two real bounds — job creation on the left, today on the right — let an
+  // exported sheet date itself without the filter row to consult. Manatal
   // does not always return a creation date, and "(— – 24 Aug 2026)" reads as
   // broken rather than unknown, so the whole parenthetical drops instead.
   const createdLabel = formatDate(jobCreatedAt ?? job.createdAt);
-  const rangeLabel = createdLabel === "—" ? null : `(${createdLabel} – ${asOfLabel})`;
+  const rangeLabel =
+    period.type !== "all" || createdLabel === "—" ? null : `(${createdLabel} – ${asOfLabel})`;
 
   return (
     <section className="pill-card p-8">
