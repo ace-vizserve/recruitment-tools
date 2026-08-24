@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getSessionToken } from '@/lib/session';
+import { canAccess } from '@/lib/access';
+import { resolveRole } from '@/lib/session';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -10,13 +11,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for auth cookie
+  // Which password opened this session decides what it can reach. Enforced
+  // here rather than in the pages, so a hidden tab is genuinely closed and
+  // not merely undrawn — typing the URL has to fail too.
   const authCookie = request.cookies.get('auth_session');
-  
-  // We need to await the token generation
-  const validToken = await getSessionToken();
+  const role = await resolveRole(authCookie?.value);
 
-  if (!authCookie || authCookie.value !== validToken) {
+  if (!role) {
     // If accessing API, return 401
     if (pathname.startsWith('/api/')) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -24,6 +25,16 @@ export async function middleware(request: NextRequest) {
     // Otherwise redirect to login
     const loginUrl = new URL('/login', request.url);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Signed in, but not for this tool. Reports is the one page every role
+  // holds, so it doubles as the landing spot for a client who typed a URL
+  // they do not have — somewhere to act from, rather than a dead end.
+  if (!canAccess(role, pathname)) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    return NextResponse.redirect(new URL('/reports', request.url));
   }
 
   return NextResponse.next();

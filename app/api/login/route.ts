@@ -1,6 +1,6 @@
 import { getUserIP } from "@/lib/ip";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { getSessionToken } from "@/lib/session";
+import { getSessionToken, roleForPassword } from "@/lib/session";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -12,10 +12,14 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { password } = body;
 
-    const appPassword = process.env.APP_PASSWORD;
+    // Which password was submitted decides what the session can do. The
+    // response says nothing about which one matched — a client and an admin
+    // get byte-identical replies, so the form cannot be used to probe for the
+    // existence of a second, more privileged password.
+    const role = await roleForPassword(password);
 
-    if (password === appPassword) {
-      const token = await getSessionToken();
+    if (role) {
+      const token = await getSessionToken(role);
 
       if (!token) {
         return NextResponse.json({ error: "Server configuration error" }, { status: 500 });

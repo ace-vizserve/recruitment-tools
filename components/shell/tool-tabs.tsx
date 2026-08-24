@@ -5,20 +5,31 @@ import { BarChart3, Link2, Mail } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { canAccess } from "@/lib/access";
+import type { Role } from "@/lib/session";
+
 const TOOLS = [
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/links", label: "Link Generator", icon: Link2 },
   { href: "/bulk-email", label: "Bulk Email", icon: Mail },
 ] as const;
 
-export default function ToolTabs() {
+export default function ToolTabs({ role }: { role: Role }) {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
 
+  // Filtered through the same predicate the middleware enforces, so the tabs
+  // on screen cannot drift from what the server actually allows.
+  const tools = TOOLS.filter((tool) => canAccess(role, tool.href));
+
+  // A tab bar offering one tab only raises the question of where the others
+  // went. With a single tool the page heading already says where you are.
+  if (tools.length < 2) return null;
+
   return (
-    <nav aria-label="Tools" className="custom-scrollbar -mx-1 overflow-x-auto px-1 pb-1">
+    <nav aria-label="Tools" className="custom-scrollbar mb-10 -mx-1 overflow-x-auto px-1 pb-1">
       <ul className="inline-flex gap-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm">
-        {TOOLS.map(({ href, label, icon: Icon }) => {
+        {tools.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href || pathname.startsWith(`${href}/`);
 
           return (
