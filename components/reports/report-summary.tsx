@@ -3,7 +3,7 @@ import Image from "next/image";
 
 import StatTile from "@/components/reports/stat-tile";
 import { ENTITY_LOGOS } from "@/lib/constants";
-import { formatCount, formatPct, pluralize } from "@/lib/reports/format";
+import { formatCount, formatDate, formatPct, pluralize } from "@/lib/reports/format";
 import type { ReportAggregate } from "@/lib/reports/types";
 
 interface ReportSummaryProps {
@@ -22,6 +22,11 @@ interface ReportSummaryProps {
   organizationName?: string | null;
   /** Picks the logo. Falls back to the payload's own organization id. */
   organizationId?: string | null;
+  /**
+   * The job's creation date, as chosen in the filter row. Falls back to the
+   * payload's own value, matching how jobTitle/organizationName resolve.
+   */
+  jobCreatedAt?: string | null;
 }
 
 export default function ReportSummary({
@@ -32,11 +37,20 @@ export default function ReportSummary({
   jobTitle,
   organizationName,
   organizationId,
+  jobCreatedAt,
 }: ReportSummaryProps) {
   const { totals, job, period } = report;
   const displayTitle = jobTitle || job.title;
   const displayOrg = organizationName || job.organizationName;
   const logo = ENTITY_LOGOS[Number(organizationId ?? job.organizationId)] ?? null;
+
+  // The label names the window; the parenthetical gives the two real dates
+  // that bound it — job creation on the left, today on the right — so an
+  // exported sheet dates itself without the filter row to consult. Manatal
+  // does not always return a creation date, and "(— – 24 Aug 2026)" reads as
+  // broken rather than unknown, so the whole parenthetical drops instead.
+  const createdLabel = formatDate(jobCreatedAt ?? job.createdAt);
+  const rangeLabel = createdLabel === "—" ? null : `(${createdLabel} – ${asOfLabel})`;
 
   return (
     <section className="pill-card p-8">
@@ -46,7 +60,10 @@ export default function ReportSummary({
       <div className="flex items-start justify-between gap-6">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
-            <p className="text-base font-bold uppercase tracking-widest text-blue-600">{period.label}</p>
+            <p className="text-base font-bold uppercase tracking-widest text-blue-600">
+              {period.label}
+              {rangeLabel && ` ${rangeLabel}`}
+            </p>
             {report.isSampleData && (
               <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-800">
                 Sample data

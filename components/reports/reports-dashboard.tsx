@@ -317,6 +317,7 @@ export default function ReportsDashboard() {
                 jobTitle={selectedJob?.position_name}
                 organizationName={selectedOrgName}
                 organizationId={organizationId}
+                jobCreatedAt={jobCreatedAt}
               />
 
               <StageFunnelChart stages={data.stageReports} isExporting={isExporting} />
