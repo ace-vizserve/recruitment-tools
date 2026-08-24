@@ -1,8 +1,9 @@
 "use client";
 
-import { Download, Loader2 } from "lucide-react";
+import { ChevronDown, FileSpreadsheet, FileText, Loader2, Upload } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
+import { toast } from "sonner";
 
 import DropReasonsChart from "@/components/reports/charts/drop-reasons-chart";
 import StageFunnelChart from "@/components/reports/charts/stage-funnel-chart";
@@ -17,9 +18,17 @@ import {
 import ReportSummary from "@/components/reports/report-summary";
 import StageSection from "@/components/reports/stage-section";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useReportData } from "@/hooks/use-report-data";
 import { useReportExport } from "@/hooks/use-report-export";
 import { ENTITY_SLUGS, entity_list } from "@/lib/constants";
+import { buildReportCsv, downloadCsv } from "@/lib/reports/csv";
+import { reportFilename } from "@/lib/reports/filename";
 import { formatDate } from "@/lib/reports/format";
 import {
   currentPeriod,
@@ -188,10 +197,38 @@ export default function ReportsDashboard() {
 
   const captureRef = React.useRef<HTMLDivElement>(null);
   const orgSlug = organizationId ? (ENTITY_SLUGS[Number(organizationId)] ?? organizationId) : "hfse";
-  const { exportPdf, isExporting } = useReportExport(
-    captureRef,
-    `hfse-report_${orgSlug}_${jobId ?? "job"}_${periodKey}.pdf`,
-  );
+
+  // The filename is the only label a download carries once it is out of the
+  // app, so it names the filters that produced it. The job *title*, not the id
+  // it used to carry: a numeric id answers none of the questions someone has
+  // when they meet the file again three weeks later.
+  const downloadTitle = selectedJob?.position_name ?? data?.job.title;
+  const pdfFilename = reportFilename({
+    organizationSlug: orgSlug,
+    jobTitle: downloadTitle,
+    jobId,
+    periodType,
+    periodKey,
+    extension: "pdf",
+  });
+  const csvFilename = reportFilename({
+    organizationSlug: orgSlug,
+    jobTitle: downloadTitle,
+    jobId,
+    periodType,
+    periodKey,
+    extension: "csv",
+  });
+
+  const { exportPdf, isExporting } = useReportExport(captureRef, pdfFilename);
+
+  // The PDF is a picture of the report; this is the same figures as data, for
+  // anyone who wants to pivot them or stack several periods in one sheet.
+  const exportCsv = React.useCallback(() => {
+    if (!data) return;
+    downloadCsv(csvFilename, buildReportCsv(data, { jobTitle: downloadTitle, organizationName: selectedOrgName }));
+    toast.success("Report CSV downloaded");
+  }, [csvFilename, data, downloadTitle, selectedOrgName]);
 
   const period = React.useMemo(() => resolvePeriod(periodType, periodKey), [periodType, periodKey]);
   const inProgress = isPeriodInProgress(period);
@@ -226,20 +263,38 @@ export default function ReportsDashboard() {
         <ReportEmpty jobTitle={data.job.title} periodLabel={data.period.label} />
       ) : (
         <>
+          {/* One control rather than a button per format: the formats are
+              alternatives, not two things to do, and two buttons side by side
+              asked a question before the report had answered one. */}
           <div className="mb-6 flex justify-end" data-export-ignore="true">
-            <Button onClick={exportPdf} disabled={isExporting} className="pill-btn-primary">
-              {isExporting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Rendering…
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4" />
-                  Download report PDF
-                </>
-              )}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild disabled={isExporting}>
+                <Button variant="outline" className="pill-action-btn gap-2 px-5">
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Rendering…
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      Export
+                      <ChevronDown className="h-4 w-4 opacity-60" />
+                    </>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-52">
+                <DropdownMenuItem onSelect={exportCsv} className="py-2.5">
+                  <FileSpreadsheet className="h-4 w-4 text-slate-500" />
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={exportPdf} className="py-2.5">
+                  <FileText className="h-4 w-4 text-slate-500" />
+                  Export as PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Everything inside this node ends up in the PDF, as a single
