@@ -10,7 +10,7 @@ import type { PeriodType } from "@/lib/reports/period";
 export type DegradationCode =
   | "MISSING_CANDIDATE_NAMES"
   | "REASONS_UNAVAILABLE"
-  | "UNRECOGNISED_DROP_REASON"
+  | "REASONS_FROM_FREE_TEXT"
   | "DERIVED_STAGE_LIST"
   | "UNMAPPED_STAGES"
   | "MISSING_FURTHEST_STAGE"

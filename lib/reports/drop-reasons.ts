@@ -61,14 +61,26 @@ export function hasDropReasons(info?: string | null): boolean {
   return !!info && HEADING_RE.test(info);
 }
 
-export function parseDropReasons(info?: string | null): string[] {
-  if (!info || !info.trim()) return [];
+export interface ParsedDropReasons {
+  reasons: string[];
+  /**
+   * True when the labels came out of prose after the heading rather than out
+   * of `<li>` items. Manatal writes a list, so free text means a recruiter
+   * typed the note by hand or the shape changed upstream — and either way the
+   * split between one reason and the next is a guess.
+   */
+  fromFreeText: boolean;
+}
+
+export function parseDropReasons(info?: string | null): ParsedDropReasons {
+  const none: ParsedDropReasons = { reasons: [], fromFreeText: false };
+  if (!info || !info.trim()) return none;
 
   // The heading is required. Without it this is a free-text comment, and
   // treating its prose as a reason would invent categories that were never
   // recorded — the failure mode is silent and pollutes the whole chart.
   const headingMatch = HEADING_RE.exec(info);
-  if (!headingMatch) return [];
+  if (!headingMatch) return none;
 
   const tail = info.slice(headingMatch.index + headingMatch[0].length);
 
@@ -78,7 +90,7 @@ export function parseDropReasons(info?: string | null): string[] {
     const value = clean(match[1] ?? "");
     if (value) listItems.push(value);
   }
-  if (listItems.length) return finalize(listItems);
+  if (listItems.length) return { reasons: finalize(listItems), fromFreeText: false };
 
   // 2. Otherwise take the text after the heading, split on common separators.
   const parts = clean(tail)
@@ -86,70 +98,82 @@ export function parseDropReasons(info?: string | null): string[] {
     .map((part) => part.trim())
     .filter((part) => part && part.length < MAX_RESIDUE_LENGTH);
 
-  return finalize(parts);
+  const reasons = finalize(parts);
+  return { reasons, fromFreeText: reasons.length > 0 };
+}
+
+/** Collapses runs of whitespace so two labels differing only in spacing match. */
+export function normalizeReasonLabel(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
 }
 
 /**
- * The drop reasons configured in Manatal. This is a closed set, which is what
- * lets us both normalise spelling and detect parse failures: anything that
- * comes out of the HTML and is *not* in here is either a new reason added in
- * Manatal or a sign the parser picked up something it shouldn't have.
- *
- * Not fetchable from the Open API (no drop-reasons endpoint exists there), so
- * it is embedded here. A workflow that can read the internal API may override
- * it per request via `dropReasonVocabulary` on the payload.
+ * Groups spellings of one reason. Punctuation- and case-insensitive, so
+ * "with job / offer" and "With Job/Offer" share a key.
  */
-export const DEFAULT_DROP_REASONS = [
-  "Background & Reference check failed",
-  "Blacklisted",
-  "Decline the Offer",
-  "Failed Interview",
-  "Failed Paperscreening",
-  "Filled position",
-  "Foreigner",
-  "High Asking",
-  "Keep in view",
-  "Not Interested",
-  "Overqualified",
-  "Pooling",
-  "Relief finished",
-  "Resigned",
-  "Withdraw",
-  "With Job/Offer",
-] as const;
-
-/** Punctuation- and case-insensitive, so "with job / offer" still matches. */
-function vocabularyKey(value: string): string {
+function reasonKey(value: string): string {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
 
-export interface CanonicalReason {
-  reason: string;
-  /** False when the label is not in the configured vocabulary. */
-  recognised: boolean;
+/**
+ * Most frequent spelling wins. Ties go to a capitalised label, then to
+ * alphabetical order, so the choice never depends on the order records arrived
+ * in — two runs over the same report must not label the same bar differently.
+ */
+function pickSpelling(spellings: Map<string, number>): string {
+  const capitalised = (value: string) => Number(/^[A-Z]/.test(value));
+  return [...spellings.entries()].sort(
+    (a, b) => b[1] - a[1] || capitalised(b[0]) - capitalised(a[0]) || a[0].localeCompare(b[0]),
+  )[0][0];
 }
 
 /**
- * Resolves a parsed label onto its official spelling. Title-casing the input
- * instead would produce "Background & Reference Check Failed", which is a
- * different string from the configured reason and would split one bar in two.
+ * Resolves the parsed labels onto one spelling per reason.
+ *
+ * There is no vocabulary to check against and none is needed: every label was
+ * read out of Manatal's own drop note, so the reasons in a report already ARE
+ * the reasons Manatal recorded. What is left is a presentation problem — two
+ * spellings of one reason would split a bar in two — and the labels themselves
+ * settle it. Title-casing instead would invent "Background & Reference Check
+ * Failed", a spelling nobody ever typed.
+ *
+ * `preferred` (the payload's `dropReasonVocabulary`) overrides the tally when
+ * supplied, so a workflow that can read Manatal's configured list can pin the
+ * official spelling even where recruiters mostly typed a variant.
  */
 export function createReasonCanonicalizer(
-  vocabulary: readonly string[] = DEFAULT_DROP_REASONS,
-): (raw: string) => CanonicalReason {
-  const lookup = new Map(vocabulary.map((reason) => [vocabularyKey(reason), reason]));
+  observed: readonly string[],
+  preferred: readonly string[] = [],
+): (raw: string) => string {
+  const tally = new Map<string, Map<string, number>>();
+  for (const raw of observed) {
+    const label = normalizeReasonLabel(raw);
+    const key = reasonKey(label);
+    if (!key) continue;
+    const spellings = tally.get(key) ?? new Map<string, number>();
+    spellings.set(label, (spellings.get(label) ?? 0) + 1);
+    tally.set(key, spellings);
+  }
+
+  const chosen = new Map<string, string>();
+  for (const [key, spellings] of tally) chosen.set(key, pickSpelling(spellings));
+
+  // Applied after the tally so a supplied spelling wins. Reasons absent from
+  // this report are seeded too, which costs nothing and keeps the mapping
+  // identical across two reports that happened to see different variants.
+  for (const raw of preferred) {
+    const label = normalizeReasonLabel(raw);
+    const key = reasonKey(label);
+    if (key) chosen.set(key, label);
+  }
 
   return (raw: string) => {
-    const trimmed = raw.replace(/\s+/g, " ").trim();
-    if (!trimmed) return { reason: "", recognised: false };
-
-    const match = lookup.get(vocabularyKey(trimmed));
-    if (match) return { reason: match, recognised: true };
-
-    return { reason: trimmed, recognised: false };
+    const label = normalizeReasonLabel(raw);
+    // A label with no alphanumerics has no key to group on; keep it as typed.
+    return chosen.get(reasonKey(label)) ?? label;
   };
 }
 

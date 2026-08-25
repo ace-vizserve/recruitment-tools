@@ -9,6 +9,7 @@
 import {
   createReasonCanonicalizer,
   hasDropReasons,
+  normalizeReasonLabel,
   parseDropReasons,
   UNRECORDED_REASON,
 } from "@/lib/reports/drop-reasons";
@@ -164,16 +165,12 @@ export function aggregateReport(payload: ReportPayload, options: AggregateOption
     source: string | null;
   }
 
-  // Manatal's configured drop reasons are a closed set; n8n may override the
-  // list if it can read them from the internal API.
-  const canonicalize = createReasonCanonicalizer(payload.dropReasonVocabulary ?? undefined);
-  const unrecognisedReasons = new Set<string>();
-
   const resolved: Resolved[] = [];
   let invalidRecords = 0;
   let missingFurthest = 0;
   let missingDropStage = 0;
   let dropsWithoutReasons = 0;
+  let freeTextReasonDrops = 0;
 
   for (const match of matches) {
     const currentIdx = idxOf(match.current_stage);
@@ -209,6 +206,8 @@ export function aggregateReport(payload: ReportPayload, options: AggregateOption
     const furthest =
       isDropped && dropIndex !== null ? dropIndex : Math.max(...candidates);
 
+    // Labels are only cleaned here, not resolved onto a canonical spelling —
+    // that needs the whole report's labels, so it happens in a second pass.
     let reasons: string[] = [];
     if (isDropped) {
       if (match.drop_reasons?.length) {
@@ -216,16 +215,12 @@ export function aggregateReport(payload: ReportPayload, options: AggregateOption
       } else {
         const html = match.drop_reason_html ?? dropEventByMatch.get(match.match_pk)?.info ?? null;
         if (html) {
-          reasons = parseDropReasons(html);
+          const parsed = parseDropReasons(html);
+          reasons = parsed.reasons;
+          if (parsed.fromFreeText) freeTextReasonDrops++;
         }
       }
-      reasons = reasons
-        .map((raw) => {
-          const { reason, recognised } = canonicalize(raw);
-          if (reason && !recognised) unrecognisedReasons.add(reason);
-          return reason;
-        })
-        .filter(Boolean);
+      reasons = reasons.map(normalizeReasonLabel).filter(Boolean);
       if (!reasons.length) dropsWithoutReasons++;
     }
 
@@ -237,6 +232,20 @@ export function aggregateReport(payload: ReportPayload, options: AggregateOption
       candidateId: match.candidate_id,
       source: match.source ?? null,
     });
+  }
+
+  // ---- Canonical reason spelling -----------------------------------------
+  // Inferred from the labels this report contains rather than checked against
+  // a configured list: Manatal's Open API exposes no drop-reasons endpoint,
+  // and every label here came out of a Manatal drop note anyway, so the set is
+  // already authoritative. n8n may still send `dropReasonVocabulary` to pin
+  // the official spellings.
+  const canonicalize = createReasonCanonicalizer(
+    resolved.flatMap((r) => r.reasons),
+    payload.dropReasonVocabulary ?? [],
+  );
+  for (const record of resolved) {
+    record.reasons = record.reasons.map(canonicalize);
   }
 
   // ---- Per-stage derivation ----------------------------------------------
@@ -328,13 +337,15 @@ export function aggregateReport(payload: ReportPayload, options: AggregateOption
     `${dropsWithoutReasons} of ${droppedTotal} ${pluralize(droppedTotal, "drop")} had no reason recorded, so ${pluralize(dropsWithoutReasons, "it appears", "they appear")} as "${UNRECORDED_REASON}".`,
     dropsWithoutReasons,
   );
-  // Either Manatal gained a reason this build doesn't know about, or the HTML
-  // parser picked up something that isn't a reason at all. Both are worth
-  // showing rather than quietly charting.
+  // This used to compare every label against a hardcoded vocabulary, which
+  // flagged Manatal's own new reasons as suspicious and needed a code change
+  // whenever the configured set moved. The real hazard is narrower: the
+  // free-text branch of the parser has to guess where one reason ends and the
+  // next begins, and only that branch can invent a category.
   addDegradation(
-    "UNRECOGNISED_DROP_REASON",
-    `${s(unrecognisedReasons.size, "drop reason")} not in the configured list: ${[...unrecognisedReasons].slice(0, 3).join(", ")}.`,
-    unrecognisedReasons.size,
+    "REASONS_FROM_FREE_TEXT",
+    `${s(freeTextReasonDrops, "drop")} recorded reasons as free text rather than as a list, so those labels may be split wrongly.`,
+    freeTextReasonDrops,
   );
   const unmappedTotal = [...unmapped.values()].reduce((sum, n) => sum + n, 0);
   addDegradation(

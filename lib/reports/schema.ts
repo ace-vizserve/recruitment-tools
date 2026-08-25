@@ -69,8 +69,9 @@ export const ReportPayloadSchema = z
     dropEvents: z.array(DropEventSchema).default([]),
     /**
      * Manatal's configured drop reasons, if the workflow can read them.
-     * Accepts plain strings or `{ id, reason }` objects. Omit to use the list
-     * built into lib/reports/drop-reasons.ts.
+     * Accepts plain strings or `{ id, reason }` objects. Optional, and only
+     * ever cosmetic: it pins the official spelling of a reason. Omit it and
+     * the spellings are inferred from the drop notes themselves.
      */
     dropReasonVocabulary: z
       .array(z.union([z.string(), z.object({ reason: z.string() }).loose()]))

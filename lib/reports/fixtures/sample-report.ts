@@ -154,6 +154,18 @@ export const SAMPLE_REPORT = {
       applied_at: "2026-08-25T06:00:00Z", is_dropped: false, source: "Careers site",
     },
 
+    // --- Reasons as prose, in variant spelling (REASONS_FROM_FREE_TEXT) ---
+    // The note carries the heading but no list, so the split between reasons
+    // is a guess. Both labels are lowercase variants of reasons other matches
+    // spell properly, and must merge onto those bars rather than open new ones.
+    {
+      match_pk: "1020", candidate_id: "9020", candidate_name: "Rahul Menon", job_id: "3254221",
+      current_stage: "Rejected", furthest_stage: "Paper Screening",
+      applied_at: "2026-08-13T02:00:00Z", is_dropped: true,
+      dropped_at: "2026-08-19T02:00:00Z", dropped_at_stage: "Paper Screening",
+      source: "Indeed",
+    },
+
     // --- Exact duplicate match_pk (DUPLICATE_RECORDS) ---------------------
     {
       match_pk: "1003", candidate_id: "9003", candidate_name: "Chloe Ng", job_id: "3254221",
@@ -172,6 +184,12 @@ export const SAMPLE_REPORT = {
       match_pk: "1011", candidate_id: "9011", job_id: "3254221", stage: "New Candidates",
       dropped_at: "2026-08-10T03:00:00Z", created_at: "2026-08-10T03:00:00Z",
       info: "<strong>Drop Reasons:</strong><br><br><li>Stale</li><br><p></p>",
+    },
+    // Heading present, no list — the free-text branch of the parser.
+    {
+      match_pk: "1020", candidate_id: "9020", job_id: "3254221", stage: "Paper Screening",
+      dropped_at: "2026-08-19T02:00:00Z", created_at: "2026-08-19T02:00:00Z",
+      info: "<strong>Drop Reasons:</strong><br>high asking; foreigner",
     },
     // Dropped in August but applied in July — outside the cohort.
     {
