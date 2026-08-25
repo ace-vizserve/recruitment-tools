@@ -72,6 +72,3 @@ export const dropReasonColor = () => PRIMARY;
  */
 export const AXIS_LABEL_SIZE = 15;
 export const VALUE_LABEL_SIZE = 17;
-
-/** Bars past this many are folded into an "Other" row. */
-export const MAX_DROP_REASON_BARS = 7;

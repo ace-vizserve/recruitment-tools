@@ -5,7 +5,7 @@ import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from "recharts"
 
 import ChartDataTable from "@/components/reports/charts/chart-data-table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { AXIS_LABEL_SIZE, GRID, INK, MAX_DROP_REASON_BARS, MUTED_INK, PRIMARY, VALUE_LABEL_SIZE } from "@/lib/reports/chart-theme";
+import { AXIS_LABEL_SIZE, GRID, INK, MUTED_INK, PRIMARY, VALUE_LABEL_SIZE } from "@/lib/reports/chart-theme";
 import { pluralize } from "@/lib/reports/format";
 import type { DropReasonCount } from "@/lib/reports/types";
 
@@ -28,11 +28,11 @@ export default function DropReasonsChart({
   isExporting,
   title = "Drop reasons",
 }: DropReasonsChartProps) {
-  // Top N plus a rolled-up "Other", so a long tail cannot squash the chart.
-  const top = reasons.slice(0, MAX_DROP_REASON_BARS);
-  const rest = reasons.slice(MAX_DROP_REASON_BARS);
-  const restTotal = rest.reduce((sum, reason) => sum + reason.count, 0);
-  const data = restTotal ? [...top, { reason: `Other (${rest.length})`, count: restTotal }] : top;
+  // Every reason gets its own bar. A rolled-up "Other" hid exactly the labels
+  // a reader wants named — the rare reasons — and the chart height is
+  // data-driven below, so a long tail lengthens the card instead of squashing
+  // the bars. The list is bounded anyway: one entry per reason in Manatal.
+  const data = reasons;
 
   return (
     <section className="pill-card p-8">

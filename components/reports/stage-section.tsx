@@ -55,8 +55,6 @@ function Figure({
 }
 
 export default function StageSection({ stage, actor }: StageSectionProps) {
-  const topReasons = stage.dropReasons.slice(0, 5);
-
   return (
     <section className="pill-card p-8">
       {/* Stacked rather than a wrapping row, so the three stage cards line up
@@ -86,22 +84,20 @@ export default function StageSection({ stage, actor }: StageSectionProps) {
             <Figure label="Dropped" count={stage.dropped} pct={stage.droppedPct} color={OUTCOME_COLORS.dropped} />
           </div>
 
-          {topReasons.length > 0 && (
+          {/* Every reason, not a top-N: the list is short (one entry per
+              reason configured in Manatal), and a truncated card made the
+              reader cross-reference the chart to find a reason worth one drop. */}
+          {stage.dropReasons.length > 0 && (
             <div className="mt-6 border-t border-slate-100 pt-5">
               <p className="text-sm font-black uppercase tracking-widest text-slate-700">Drop reasons</p>
               <ul className="mt-3 space-y-1.5">
-                {topReasons.map((reason) => (
+                {stage.dropReasons.map((reason) => (
                   <li key={reason.reason} className="flex items-baseline justify-between gap-4 text-base">
                     <span className="font-semibold text-slate-900">{reason.reason}</span>
                     <span className="font-extrabold tabular-nums text-slate-900">{reason.count}</span>
                   </li>
                 ))}
               </ul>
-              {stage.dropReasons.length > topReasons.length && (
-                <p className="mt-2 text-sm font-medium text-slate-600">
-                  +{stage.dropReasons.length - topReasons.length} more, shown in the drop reasons chart.
-                </p>
-              )}
             </div>
           )}
         </>
