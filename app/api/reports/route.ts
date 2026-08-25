@@ -1,9 +1,11 @@
 import * as z from "zod";
 
 import { aggregateReport } from "@/lib/reports/aggregate";
+import { hasDropReasons } from "@/lib/reports/drop-reasons";
 import { SAMPLE_MANATAL } from "@/lib/reports/fixtures/sample-manatal";
 import { SAMPLE_REPORT } from "@/lib/reports/fixtures/sample-report";
 import { findPipelineId, normalizeManatalPayload } from "@/lib/reports/manatal";
+import { fetchDropReasonNotes } from "@/lib/reports/manatal-notes";
 import { fetchPipelineStages } from "@/lib/reports/manatal-pipeline";
 import { isValidPeriodKey, resolvePeriod, type PeriodType } from "@/lib/reports/period";
 import {
@@ -178,6 +180,37 @@ export async function GET(request: Request) {
         { error: "The reporting service returned data for a different job. Try again." },
         { status: 502 },
       );
+    }
+
+    // The workflow's activity feed does not cover every drop — on the older
+    // jobs it misses the earliest ones, which then read as "Not recorded" even
+    // though the reason is recorded in Manatal. Read those notes directly.
+    // Same self-healing as the pipeline above, and equally optional: a failure
+    // leaves the report exactly as it would have been.
+    if (!REPORTS_USE_FIXTURE) {
+      const covered = new Set<string>();
+      for (const event of reportPayload.dropEvents ?? []) {
+        if (hasDropReasons(event.info)) covered.add(String(event.match_pk));
+      }
+      const uncovered = reportPayload.matches
+        .filter(
+          (match) =>
+            match.is_dropped === true &&
+            !match.drop_reasons?.length &&
+            !hasDropReasons(match.drop_reason_html) &&
+            !covered.has(String(match.match_pk)),
+        )
+        .map((match) => String(match.match_pk));
+
+      if (uncovered.length) {
+        const notes = await fetchDropReasonNotes(uncovered, MANATAL_OPEN_API_KEY);
+        if (notes.length) {
+          reportPayload = {
+            ...reportPayload,
+            dropEvents: [...(reportPayload.dropEvents ?? []), ...notes],
+          };
+        }
+      }
     }
 
     const aggregate = aggregateReport(reportPayload, {
